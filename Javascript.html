@@ -1,444 +1,410 @@
-<!-- <script>
-/* ================= CLIENT JS V3 ================= */
-let isLogin = false;
-const $ = id => document.getElementById(id);
-const fmt = n => new Intl.NumberFormat('vi-VN').format(n||0);
-
-/* ================= AUTH ================= */
-function toggleLogin(){
-  if(isLogin){
-    isLogin = false;
-    $('btnLogin').innerText = 'Đăng nhập';
-    $('btnLogin').classList.remove('logged');
-    loadAll();
-    return;
-  }
-  $('loginModal').classList.add('active');
-}
-
-function closeLogin(){ $('loginModal').classList.remove('active'); }
-function closeLoginOutside(e){ if(e.target.id==='loginModal') closeLogin(); }
-
-function doLogin(){
-  const u = $('u').value.trim(), p = $('p').value.trim();
-  google.script.run.withSuccessHandler(r=>{
-    if(!r.ok){ alert('Sai tài khoản hoặc mật khẩu'); return; }
-    isLogin = true;
-    $('loginModal').classList.remove('active');
-    $('btnLogin').innerText = 'Đăng xuất';
-    $('btnLogin').classList.add('logged');
-    showToast('Đã đăng nhập');
-    loadAll();
-  }).login(u,p);
-}
-
-/* ================= LOAD & RENDER ================= */
-let lastFilter = {};
-
-function renderTable(rows){
-  const tb = $('tb'); tb.innerHTML = '';
-  (rows||[]).forEach(r=>{
-    const cls = (r.type==='Chi') ? 'tr-chi' : '';
-    const btnClass = isLogin ? '' : 'icon-disabled';
-    tb.insertAdjacentHTML('beforeend', `
-      <tr class="${cls}">
-        <td>${r.date}</td>
-        <td style="text-align:center">${r.type}</td>
-        <td>${escapeHtml(r.content||'')}</td>
-        <td class="col-amount">${fmt(r.amount)}</td>
-        <td style="text-align:center">
-          <button class="${btnClass}" onclick="openEditModal('${r.id}')">✏️</button>
-          <button class="${btnClass}" onclick="deleteRow('${r.id}')">🗑</button>
-        </td>
-      </tr>
-    `);
-  });
-}
-
-function loadData(){
-  google.script.run.withSuccessHandler(renderTable).listData();
-}
-
-function loadSummary(){
-  google.script.run.withSuccessHandler(s=>{
-    if(!s) return;
-    $('sThu').innerText = fmt(s.thu);
-    $('sChi').innerText = fmt(s.chi);
-    $('sTon').innerText = fmt(s.ton);
-  }).summary();
-}
-
-function loadAll(){ loadData(); loadSummary(); }
-
-/* ================= DELETE ================= */
-function deleteRow(id){
-  if(!isLogin){ showToast('Cần đăng nhập để xóa'); return; }
-  if(!confirm('Xóa mục này?')) return;
-  google.script.run.withSuccessHandler(res=>{
-    showToast('Đã xóa dữ liệu thành công!');
-    loadAll();
-  }).deleteRow(id);
-}
-
-/* ================= MODAL ADD / EDIT ================= */
-let modalEditId = null;
-
-function openModal(){
-  if(!isLogin){ showToast('Cần đăng nhập để thêm dữ liệu'); return; }
-  modalEditId = null;
-  $('modalTitle').innerText = 'Thêm dữ liệu';
-  $('m_date').value = new Date().toISOString().split('T')[0];
-  $('m_type').value = 'Thu';
-  $('m_content').value = '';
-  $('m_amount').value = '';
-  $('modalForm').classList.add('active');
-}
-
-function closeModal(){ $('modalForm').classList.remove('active'); }
-function closeModalOutside(e){ if(e.target.id==='modalForm') closeModal(); }
-
-function openEditModal(id){
-  if(!isLogin){ showToast('Cần đăng nhập để sửa dữ liệu'); return; }
-  google.script.run.withSuccessHandler(obj=>{
-    if(!obj){ alert('Không tìm thấy dữ liệu'); return; }
-    modalEditId = id;
-    $('modalTitle').innerText = 'Cập nhật dữ liệu';
-    $('m_date').value = toISO(obj.date);
-    $('m_type').value = obj.type;
-    $('m_content').value = obj.content;
-    $('m_amount').value = obj.amount;
-    $('modalForm').classList.add('active');
-  }).getItemById(id);
-}
-
-function modalSave(){
-  if(!isLogin){ alert('Cần đăng nhập'); return; }
-  const obj = {
-    id: modalEditId,
-    date: $('m_date').value,
-    type: $('m_type').value,
-    content: $('m_content').value,
-    amount: Number($('m_amount').value||0)
-  };
-  if(modalEditId){
-    google.script.run.withSuccessHandler(()=>{
-      showToast('Đã cập nhật dữ liệu!');
-      closeModal();
-      loadAll();
-    }).updateRow(obj);
-  } else {
-    google.script.run.withSuccessHandler(()=>{
-      showToast('Đã thêm dữ liệu thành công!');
-      closeModal();
-      loadAll();
-    }).addRow(obj);
-  }
-}
-
-/* ================= SEARCH ================= */
-function searchTable(){
-  const kw = $('searchBox').value.toLowerCase().trim();
-  document.querySelectorAll('#tb tr').forEach(tr=>{
-    const text = tr.innerText.toLowerCase();
-    tr.style.display = text.includes(kw) ? '' : 'none';
-  });
-}
-
-/* ================= FILTER UI ================= */
-function onModeChange(){
-  const mode = $('f_mode').value;
-  ['f_date_from_row','f_date_to_row','f_year_row','f_month_from_row','f_month_to_row','f_quarter_row'].forEach(id=> $(id).style.display='none');
-  if(mode==='date'){ $('f_date_from_row').style.display='block'; $('f_date_to_row').style.display='none'; }
-  else if(mode==='range'){ $('f_date_from_row').style.display='block'; $('f_date_to_row').style.display='block'; }
-  else if(mode==='month'){ $('f_year_row').style.display='block'; $('f_month_from_row').style.display='block'; $('f_month_to_row').style.display='block'; }
-  else if(mode==='quarter'){ $('f_year_row').style.display='block'; $('f_quarter_row').style.display='block'; }
-  else if(mode==='year'){ $('f_year_row').style.display='block'; }
-}
-
-function populateFilterControls(){
-  const yearSel = $('f_year'); yearSel.innerHTML='';
-  const cur = new Date().getFullYear();
-  for(let y=cur;y>=cur-10;y--){ yearSel.insertAdjacentHTML('beforeend', `<option value="${y}">${y}</option>`); }
-  const mf = $('f_month_from'), mt = $('f_month_to');
-  mf.innerHTML=''; mt.innerHTML='';
-  for(let m=1;m<=12;m++){ mf.insertAdjacentHTML('beforeend', `<option value="${m}">${m}</option>`); mt.insertAdjacentHTML('beforeend', `<option value="${m}">${m}</option>`); }
-  mf.value = (new Date().getMonth()+1); mt.value = mf.value;
-}
-
-function buildFilterParams(){
-  const mode = $('f_mode').value;
-  const type = $('f_type').value;
-  const p = { mode: mode==='all'?'all':mode, type: type||'' };
-  if(mode==='date'){ p.from = $('f_from').value; }
-  else if(mode==='range'){ p.from = $('f_from').value; p.to = $('f_to').value; }
-  else if(mode==='month'){ p.year = $('f_year').value; p.fromMonth = $('f_month_from').value; p.toMonth = $('f_month_to').value; }
-  else if(mode==='quarter'){ p.year = $('f_year').value; p.quarter = $('f_quarter').value; }
-  else if(mode==='year'){ p.year = $('f_year').value; }
-  return p;
-}
-
-function applyFilter(){
-  const p = buildFilterParams();
-  lastFilter = p;
-  google.script.run.withSuccessHandler(renderTable).filterData(p);
-}
-
-/* ================= EXPORT ================= */
-function exportExcel(){
-  const p = lastFilter || { mode:'all', type:'' };
-  showToast('Đang tạo file Excel...');
-  google.script.run.withSuccessHandler(url=>{
-    window.open(url,'_blank'); showToast('Đã tạo file Excel');
-  }).exportFilteredExcel(p);
-}
-
-function exportPdf(){
-  const p = lastFilter || { mode:'all', type:'' };
-  showToast('Đang tạo file PDF...');
-  google.script.run.withSuccessHandler(url=>{
-    window.open(url,'_blank'); showToast('Đã tạo file PDF');
-  }).exportFilteredPdf(p);
-}
-
-/* ================= HELPERS ================= */
-function toISO(d){ if(!d) return ''; if(d.indexOf('-')>-1) return d; const p=d.split('/'); return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`; }
-function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
-function showToast(msg){ const t = $('toast'); t.innerText=msg; t.classList.add('show'); setTimeout(()=> t.classList.remove('show'),2000); }
-
-/* ================= INIT ================= */
-window.addEventListener('load', ()=>{
-  populateFilterControls();
-  onModeChange();
-  $('btnLogin').innerText='Đăng nhập';
-  if($('m_date')) $('m_date').value = new Date().toISOString().split('T')[0];
-  loadAll();
-});
-</script> -->
-
 <script>
-/* ================= CLIENT JS V3 + RESET FILTER ================= */
-let isLogin = false;
-const $ = id => document.getElementById(id);
-const fmt = n => new Intl.NumberFormat('vi-VN').format(n||0);
+/* ============================================================
+   1. KHAI BÁO BIẾN TOÀN CỤC & TIỆN ÍCH (STATE & UTILS)
+   ============================================================ */
+let isLoggedIn = false;
+let lastRows = [];
+let editId = null;
 
-/* ================= AUTH ================= */
-function toggleLogin(){
-  if(isLogin){
-    isLogin = false;
-    $('btnLogin').innerText = 'Đăng nhập';
-    $('btnLogin').classList.remove('logged');
-    loadAll();
+const $ = i => document.getElementById(i);
+const fmt = n => new Intl.NumberFormat('vi-VN').format(n || 0);
+
+/* ============================================================
+   2. QUẢN LÝ ĐĂNG NHẬP (AUTHENTICATION)
+   ============================================================ */
+function toggleLogin() {
+  if (isLoggedIn) {
+    isLoggedIn = false;
+    const btn = $('btnLogin');
+    btn.innerText = 'Đăng nhập';
+    btn.classList.remove('logged'); 
+    
+    updateAddBtn();
+    renderTable(lastRows);
+    showToast('Đã đăng xuất', '#666');
     return;
   }
   $('loginModal').classList.add('active');
 }
 
-function closeLogin(){ $('loginModal').classList.remove('active'); }
-function closeLoginOutside(e){ if(e.target.id==='loginModal') closeLogin(); }
+function doLogin() {
+  const user = $('u').value;
+  const pass = $('p').value;
+  if (!user || !pass) return alert('Vui lòng nhập đầy đủ');
 
-function doLogin(){
-  const u = $('u').value.trim(), p = $('p').value.trim();
-  google.script.run.withSuccessHandler(r=>{
-    if(!r.ok){ alert('Sai tài khoản hoặc mật khẩu'); return; }
-    isLogin = true;
+  google.script.run.withSuccessHandler(r => {
+    if (!r.ok) return alert('Sai tài khoản hoặc mật khẩu');
+    isLoggedIn = true;
+    const btn = $('btnLogin');
+    btn.innerText = 'Đăng xuất';
+    btn.classList.add('logged');
+    
     $('loginModal').classList.remove('active');
-    $('btnLogin').innerText = 'Đăng xuất';
-    $('btnLogin').classList.add('logged');
-    showToast('Đã đăng nhập');
-    loadAll();
-  }).login(u,p);
+    $('u').value = ''; 
+    $('p').value = '';
+
+    updateAddBtn();
+    renderTable(lastRows);
+    showToast('Đăng nhập thành công!', '#16a34a');
+  }).login(user, pass);
 }
 
-/* ================= LOAD & RENDER ================= */
-let lastFilter = {};
+function closeLogin() {
+  $('loginModal').classList.remove('active');
+}
 
-function renderTable(rows){
-  const tb = $('tb'); tb.innerHTML = '';
-  (rows||[]).forEach(r=>{
-    const cls = (r.type==='Chi') ? 'tr-chi' : '';
-    const btnClass = isLogin ? '' : 'icon-disabled';
-    tb.insertAdjacentHTML('beforeend', `
-      <tr class="${cls}">
-        <td>${r.date}</td>
-        <td style="text-align:center">${r.type}</td>
-        <td>${escapeHtml(r.content||'')}</td>
-        <td class="col-amount">${fmt(r.amount)}</td>
-        <td style="text-align:center">
-          <button class="${btnClass}" onclick="openEditModal('${r.id}')">✏️</button>
-          <button class="${btnClass}" onclick="deleteRow('${r.id}')">🗑</button>
+function closeLoginOutside(e) {
+  if (e.target.id === 'loginModal') closeLogin();
+}
+
+/* ============================================================
+   3. TẢI DỮ LIỆU & HIỂN THỊ BẢNG (DATA LOADING & RENDERING)
+   ============================================================ */
+function loadAll(){
+  google.script.run.withSuccessHandler(r=>{
+    lastRows = r || [];
+    renderTable(lastRows);
+  }).listData();
+
+  google.script.run.withSuccessHandler(s=>{
+    $('sThu').innerText = fmt(s.thu);
+    $('sChi').innerText = fmt(s.chi);
+    $('sTon').innerText = fmt(s.ton);
+  }).summary();
+}
+
+function renderTable(rows) {
+  const tbody = $('tb');
+  tbody.innerHTML = ''; 
+  
+  rows.forEach(r => {
+    const rowClass = (r.type === 'Chi' || r.type === 'chi') ? 'tr-chi' : '';
+    const disClass = isLoggedIn ? '' : 'icon-disabled';
+    const loginTitle = isLoggedIn ? '' : 'title="Yêu cầu đăng nhập"';
+    const pointerStyle = isLoggedIn ? '' : 'style="pointer-events:none; opacity:0.35;"';
+
+    tbody.insertAdjacentHTML('beforeend', `
+      <tr class="${rowClass}">
+        <td style="white-space: nowrap;">${r.date}</td>
+        <td style="font-weight: 500;">${r.type}</td>
+        <td>${r.content}</td>
+        <td style="text-align:right; font-weight: bold;">${fmt(r.amount)}</td>
+        <td style="text-align:center" onclick="if(!isLoggedIn) showToast('Yêu cầu đăng nhập', '#e67e22')">
+          <button class="${disClass}" ${loginTitle} ${pointerStyle} onclick="openEditModal('${r.id}')">✏️</button>
+          <button class="${disClass}" ${loginTitle} ${pointerStyle} onclick="del('${r.id}')">🗑</button>
         </td>
       </tr>
     `);
   });
 }
 
-function loadData(){ google.script.run.withSuccessHandler(renderTable).listData(); }
-function loadSummary(){
-  google.script.run.withSuccessHandler(s=>{
-    if(!s) return;
-    $('sThu').innerText = fmt(s.thu);
-    $('sChi').innerText = fmt(s.chi);
-    $('sTon').innerText = fmt(s.ton);
-  }).summary();
-}
-function loadAll(){ loadData(); loadSummary(); }
-
-/* ================= DELETE ================= */
-function deleteRow(id){
-  if(!isLogin){ showToast('Cần đăng nhập để xóa'); return; }
-  if(!confirm('Xóa mục này?')) return;
-  google.script.run.withSuccessHandler(res=>{
-    showToast('Đã xóa dữ liệu thành công!');
-    loadAll();
-  }).deleteRow(id);
+/* ============================================================
+   4. TÌM KIẾM & TRẠNG THÁI NÚT (SEARCH & UI STATE)
+   ============================================================ */
+function searchTable(){
+  const k = $('searchBox').value.toLowerCase();
+  document.querySelectorAll('#tb tr').forEach(tr=>{
+    tr.style.display = tr.innerText.toLowerCase().includes(k) ? '' : 'none';
+  });
 }
 
-/* ================= MODAL ADD / EDIT ================= */
-let modalEditId = null;
+function updateAddBtn() {
+  const btnAdd = $('btnAdd');
+  const btnSheet = $('sheetLink');
+  const loginMsg = "Yêu cầu đăng nhập";
 
+  if (isLoggedIn) {
+    if (btnAdd) {
+      btnAdd.classList.remove('disabled');
+      btnAdd.disabled = false;
+      btnAdd.title = "";
+    }
+    if (btnSheet) {
+      btnSheet.classList.remove('disabled');
+      btnSheet.style.pointerEvents = "auto";
+      btnSheet.style.opacity = "1";
+      btnSheet.title = "";
+    }
+  } else {
+    if (btnAdd) {
+      btnAdd.classList.add('disabled');
+      btnAdd.disabled = true;
+      btnAdd.title = loginMsg;
+      btnAdd.parentElement.onclick = () => { if(!isLoggedIn) showToast(loginMsg, "orange"); };
+    }
+    if (btnSheet) {
+      btnSheet.classList.add('disabled');
+      btnSheet.style.pointerEvents = "none";
+      btnSheet.style.opacity = "0.5";
+      btnSheet.title = loginMsg;
+    }
+  }
+}
+
+/* ============================================================
+   5. THÊM, SỬA, XÓA DỮ LIỆU (CRUD OPERATIONS)
+   ============================================================ */
 function openModal(){
-  if(!isLogin){ showToast('Cần đăng nhập để thêm dữ liệu'); return; }
-  modalEditId = null;
+  if(!isLoggedIn) return alert('Cần đăng nhập');
+  editId = null;
   $('modalTitle').innerText = 'Thêm dữ liệu';
-  $('m_date').value = new Date().toISOString().split('T')[0];
+  $('m_date').value = new Date().toISOString().slice(0,10);
   $('m_type').value = 'Thu';
   $('m_content').value = '';
   $('m_amount').value = '';
   $('modalForm').classList.add('active');
 }
 
-function closeModal(){ $('modalForm').classList.remove('active'); }
-function closeModalOutside(e){ if(e.target.id==='modalForm') closeModal(); }
-
 function openEditModal(id){
-  if(!isLogin){ showToast('Cần đăng nhập để sửa dữ liệu'); return; }
-  google.script.run.withSuccessHandler(obj=>{
-    if(!obj){ alert('Không tìm thấy dữ liệu'); return; }
-    modalEditId = id;
-    $('modalTitle').innerText = 'Cập nhật dữ liệu';
-    $('m_date').value = toISO(obj.date);
-    $('m_type').value = obj.type;
-    $('m_content').value = obj.content;
-    $('m_amount').value = obj.amount;
+  if(!isLoggedIn) return;
+  google.script.run.withSuccessHandler(d=>{
+    if(!d) return alert('Không tìm thấy dữ liệu');
+    editId = d.id;
+    $('modalTitle').innerText = 'Sửa dữ liệu';
+    $('m_date').value = d.date;
+    $('m_type').value = d.type;
+    $('m_content').value = d.content;
+    $('m_amount').value = d.amount;
     $('modalForm').classList.add('active');
   }).getItemById(id);
 }
 
 function modalSave(){
-  if(!isLogin){ alert('Cần đăng nhập'); return; }
-  const obj = {
-    id: modalEditId,
+  if(!isLoggedIn) return;
+  const o = {
+    id: editId,
     date: $('m_date').value,
     type: $('m_type').value,
     content: $('m_content').value,
-    amount: Number($('m_amount').value||0)
+    amount: Number($('m_amount').value)
   };
-  if(modalEditId){
-    google.script.run.withSuccessHandler(()=>{
-      showToast('Đã cập nhật dữ liệu!');
-      closeModal();
-      loadAll();
-    }).updateRow(obj);
-  } else {
-    google.script.run.withSuccessHandler(()=>{
-      showToast('Đã thêm dữ liệu thành công!');
-      closeModal();
-      loadAll();
-    }).addRow(obj);
+  const fn = editId ? 'updateRow' : 'addRow';
+  const msg = editId ? 'Đã cập nhật' : 'Đã thêm dữ liệu thành công';
+  const color = editId ? '#2563eb' : '#16a34a';
+
+  google.script.run.withSuccessHandler(()=>{
+    closeModal();
+    loadAll();
+    showToast(msg, color);
+  })[fn](o);
+}
+
+function closeModal(){
+  $('modalForm').classList.remove('active');
+}
+
+function closeModalOutside(e){
+  if(e.target.id === 'modalForm') closeModal();
+}
+
+function del(id){
+  if(!isLoggedIn) return;
+  if(!confirm('Chắc chắn xóa dòng này?')) return;
+  google.script.run.withSuccessHandler(() => {
+    loadAll();
+    showToast("Đã xóa dữ liệu", "#dc2626");
+  }).deleteRow(id);
+}
+
+/* ============================================================
+   6. LOGIC BỘ LỌC NÂNG CAO (FILTER SYSTEM)
+   ============================================================ */
+function initFilterDropdowns() {
+  const yearSelect = $('f_year');
+  const monthFrom = $('f_month_from');
+  const monthTo = $('f_month_to');
+
+  if (yearSelect) {
+    yearSelect.innerHTML = '';
+    const currentYear = new Date().getFullYear();
+    for (let i = currentYear - 5; i <= currentYear + 5; i++) {
+      let opt = document.createElement('option');
+      opt.value = i; opt.innerHTML = i;
+      if (i === currentYear) opt.selected = true;
+      yearSelect.appendChild(opt);
+    }
+  }
+
+  if (monthFrom && monthTo) {
+    monthFrom.innerHTML = ''; monthTo.innerHTML = '';
+    for (let i = 1; i <= 12; i++) {
+      let optFrom = document.createElement('option');
+      let optTo = document.createElement('option');
+      optFrom.value = i; optFrom.innerHTML = 'Tháng ' + i;
+      optTo.value = i; optTo.innerHTML = 'Tháng ' + i;
+      monthFrom.appendChild(optFrom);
+      monthTo.appendChild(optTo);
+    }
+    const currentMonth = new Date().getMonth() + 1;
+    monthFrom.value = currentMonth;
+    monthTo.value = currentMonth;
   }
 }
 
-/* ================= SEARCH ================= */
-function searchTable(){
-  const kw = $('searchBox').value.toLowerCase().trim();
-  document.querySelectorAll('#tb tr').forEach(tr=>{
-    const text = tr.innerText.toLowerCase();
-    tr.style.display = text.includes(kw) ? '' : 'none';
-  });
-}
-
-/* ================= FILTER UI ================= */
-function onModeChange(){
+function onModeChange() {
   const mode = $('f_mode').value;
-  ['f_date_from_row','f_date_to_row','f_year_row','f_month_from_row','f_month_to_row','f_quarter_row'].forEach(id=> $(id).style.display='none');
-  if(mode==='date'){ $('f_date_from_row').style.display='block'; $('f_date_to_row').style.display='none'; }
-  else if(mode==='range'){ $('f_date_from_row').style.display='block'; $('f_date_to_row').style.display='block'; }
-  else if(mode==='month'){ $('f_year_row').style.display='block'; $('f_month_from_row').style.display='block'; $('f_month_to_row').style.display='block'; }
-  else if(mode==='quarter'){ $('f_year_row').style.display='block'; $('f_quarter_row').style.display='block'; }
-  else if(mode==='year'){ $('f_year_row').style.display='block'; }
+  const config = {
+    'f_date_from_row': ['date', 'range'],
+    'f_date_to_row': ['range'],
+    'f_year_row': ['month', 'quarter', 'year'],
+    'f_month_from_row': ['month'],
+    'f_month_to_row': ['month'],
+    'f_quarter_row': ['quarter']
+  };
+
+  for (let id in config) {
+    const el = $(id);
+    if (el) el.style.display = config[id].includes(mode) ? 'block' : 'none';
+  }
+
+  const lblFrom = $('lbl_from');
+  if (lblFrom) lblFrom.innerText = (mode === 'range') ? 'Từ ngày' : 'Ngày';
 }
 
-function populateFilterControls(){
-  const yearSel = $('f_year'); yearSel.innerHTML='';
-  const cur = new Date().getFullYear();
-  for(let y=cur;y>=cur-10;y--){ yearSel.insertAdjacentHTML('beforeend', `<option value="${y}">${y}</option>`); }
-  const mf = $('f_month_from'), mt = $('f_month_to');
-  mf.innerHTML=''; mt.innerHTML='';
-  for(let m=1;m<=12;m++){ mf.insertAdjacentHTML('beforeend', `<option value="${m}">${m}</option>`); mt.insertAdjacentHTML('beforeend', `<option value="${m}">${m}</option>`); }
-  mf.value = (new Date().getMonth()+1); mt.value = mf.value;
+function applyFilter() {
+  const filterData = {
+    type: $('f_type').value,
+    mode: $('f_mode').value,
+    dateFrom: $('f_from').value,
+    dateTo: $('f_to').value,
+    year: $('f_year').value,
+    monthFrom: $('f_month_from').value,
+    monthTo: $('f_month_to').value,
+    quarter: $('f_quarter').value
+  };
+
+  const btn = event.currentTarget;
+  const originalText = btn.innerText;
+  btn.innerText = "Đang lọc...";
+  btn.disabled = true;
+
+  google.script.run
+    .withSuccessHandler(function(data) {
+      renderTable(data); 
+      btn.innerText = originalText;
+      btn.disabled = false;
+      showToast("Đã cập nhật dữ liệu bộ lọc");
+    })
+    .withFailureHandler(function(err) {
+      btn.innerText = originalText;
+      btn.disabled = false;
+      showToast("Lỗi: " + err.message, "red");
+    })
+    .getDataFromServer(filterData); 
 }
 
-function buildFilterParams(){
-  const mode = $('f_mode').value;
-  const type = $('f_type').value;
-  const p = { mode: mode==='all'?'all':mode, type: type||'' };
-  if(mode==='date'){ p.from = $('f_from').value; }
-  else if(mode==='range'){ p.from = $('f_from').value; p.to = $('f_to').value; }
-  else if(mode==='month'){ p.year = $('f_year').value; p.fromMonth = $('f_month_from').value; p.toMonth = $('f_month_to').value; }
-  else if(mode==='quarter'){ p.year = $('f_year').value; p.quarter = $('f_quarter').value; }
-  else if(mode==='year'){ p.year = $('f_year').value; }
-  return p;
+function clearFilter() {
+  if($('searchBox')) $('searchBox').value = '';
+  if($('f_type')) $('f_type').value = '';
+  if($('f_mode')) $('f_mode').value = 'all';
+  
+  onModeChange(); 
+  if (lastRows && lastRows.length > 0) {
+    renderTable(lastRows); 
+  } else {
+    loadAll();
+  }
+  showToast("Đã xóa tất cả bộ lọc");
 }
 
-function applyFilter(){
-  const p = buildFilterParams();
-  lastFilter = p;
-  google.script.run.withSuccessHandler(renderTable).filterData(p);
+/* ============================================================
+   7. XUẤT DỮ LIỆU (EXPORT EXCEL & PDF)
+   ============================================================ */
+function exportExcel() {
+  try {
+    const data = [];
+
+    // 1. Thêm Tiêu đề báo cáo (Gộp ô sẽ làm ở bước sau)
+    data.push(["BÁO CÁO THU CHI"]); 
+    data.push([]); // Dòng trống để giãn cách
+
+    // 2. Thêm Tiêu đề cột
+    data.push(["Ngày tháng", "Loại", "Nội dung", "Số tiền"]);
+
+    // 3. Lấy dữ liệu từ thẻ <tbody> (Nơi chứa các hàng r.date, r.type...)
+    // Thay 'tb' bằng ID chính xác của thẻ <tbody> trong HTML của bạn
+    const tbody = document.getElementById("tb");
+    const rows = tbody.querySelectorAll("tr");
+
+    if (rows.length === 0) {
+      showToast("Không có dữ liệu để xuất!", "#e67e22");
+      return;
+    }
+
+    // 4. Lặp qua từng hàng để lấy 4 cột đầu tiên
+    rows.forEach(row => {
+      const cols = row.querySelectorAll("td");
+      // Chỉ lấy dữ liệu nếu hàng có đủ số cột
+      if (cols.length >= 4) {
+        data.push([
+          cols[0].innerText.trim(), // Ngày
+          cols[1].innerText.trim(), // Loại
+          cols[2].innerText.trim(), // Nội dung
+          cols[3].innerText.trim()  // Số tiền (dạng văn bản có dấu phân cách)
+        ]);
+      }
+    });
+
+    // 5. Tạo Worksheet từ mảng dữ liệu (Array of Arrays)
+    const ws = XLSX.utils.aoa_to_sheet(data);
+
+    // 6. Cấu hình gộp ô cho tiêu đề "BÁO CÁO THU CHI" (Hàng 1, từ Cột A đến D)
+    ws['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }
+    ];
+
+    // 7. Định dạng độ rộng cột (wch: width character)
+    ws['!cols'] = [
+      { wch: 15 }, // Ngày
+      { wch: 10 }, // Loại
+      { wch: 40 }, // Nội dung
+      { wch: 15 }  // Số tiền
+    ];
+
+    // 8. Tạo Workbook và tải file
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Báo cáo");
+    
+    const dateStr = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `Bao_Cao_Thu_Chi_${dateStr}.xlsx`);
+
+    showToast("Đã xuất báo cáo thành công!", "#16a34a");
+  } catch (e) {
+    console.error("Lỗi Excel:", e);
+    alert("Không thể lấy dữ liệu bảng. Hãy kiểm tra ID 'tb'");
+  }
 }
 
-/* ===== RESET FILTER BUTTON ===== */
-function resetFilter(){
-  $('f_type').value = '';
-  $('f_mode').value = 'all';
-  $('f_from').value = '';
-  $('f_to').value = '';
-  $('f_year').value = new Date().getFullYear();
-  $('f_month_from').value = new Date().getMonth()+1;
-  $('f_month_to').value = new Date().getMonth()+1;
-  $('f_quarter').value = 1;
-  onModeChange();
-  applyFilter();
+function exportPDF() {
+  const element = document.querySelector('table');
+  const win = window.open('', '', 'height=700,width=900');
+  win.document.write('<html><head><title>Xuất PDF</title>');
+  win.document.write('<style>table { width: 100%; border-collapse: collapse; font-size: 12px; } th, td { border: 1px solid black; padding: 4px; text-align: left; } .tr-chi td { color: red; }</style>');
+  win.document.write('</head><body>');
+  win.document.write('<h3>DANH SÁCH THU CHI</h3>');
+  win.document.write(element.outerHTML);
+  win.document.write('</body></html>');
+  win.document.close();
+  setTimeout(() => win.print(), 500);
 }
 
-/* ================= EXPORT ================= */
-function exportExcel(){
-  const p = lastFilter || { mode:'all', type:'' };
-  showToast('Đang tạo file Excel...');
-  google.script.run.withSuccessHandler(url=>{
-    window.open(url,'_blank'); showToast('Đã tạo file Excel');
-  }).exportFilteredExcel(p);
+/* ============================================================
+   8. THÔNG BÁO & KHỞI TẠO (TOAST & INIT)
+   ============================================================ */
+function showToast(msg, color = "#333") {
+  const toast = $('toast');
+  if (toast) {
+    toast.innerText = msg;
+    toast.style.backgroundColor = color;
+    toast.className = "toast show";
+    setTimeout(() => { toast.className = "toast"; }, 3000);
+  }
 }
 
-function exportPdf(){
-  const p = lastFilter || { mode:'all', type:'' };
-  showToast('Đang tạo file PDF...');
-  google.script.run.withSuccessHandler(url=>{
-    window.open(url,'_blank'); showToast('Đã tạo file PDF');
-  }).exportFilteredPdf(p);
-}
-
-/* ================= HELPERS ================= */
-function toISO(d){ if(!d) return ''; if(d.indexOf('-')>-1) return d; const p=d.split('/'); return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`; }
-function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
-function showToast(msg){ const t = $('toast'); t.innerText=msg; t.classList.add('show'); setTimeout(()=> t.classList.remove('show'),2000); }
-
-/* ================= INIT ================= */
-window.addEventListener('load', ()=>{
-  populateFilterControls();
-  onModeChange();
-  $('btnLogin').innerText='Đăng nhập';
-  if($('m_date')) $('m_date').value = new Date().toISOString().split('T')[0];
+window.addEventListener('DOMContentLoaded', () => {
+  updateAddBtn();
   loadAll();
+  initFilterDropdowns();
+  onModeChange(); 
 });
 </script>
-

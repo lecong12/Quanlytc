@@ -2,166 +2,249 @@
 <html>
 <head>
   <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  
   <?!= include('Css'); ?>
+  
+  <style>
+    /* LAYOUT CHÍNH */
+    body { background-color: #d1d8e0; font-family: 'Segoe UI', sans-serif; height: 100vh; margin: 0; overflow: hidden; }
+    
+    /* KHUNG APP: Mở rộng lên 1500px trên Desktop */
+    .app-container { 
+      display: flex; 
+      flex-direction: column; 
+      height: 100vh; 
+      padding: 10px; 
+      margin: 0 auto; 
+      max-width: 1000px; /* Đã tăng độ rộng */
+      background: #f8f9fa; 
+      box-shadow: 0 0 30px rgba(0,0,0,0.2);
+    }
+    
+    /* CỐ ĐỊNH PHẦN ĐẦU */
+    .sticky-top-section { flex-shrink: 0; background: inherit; z-index: 1020; padding-bottom: 10px; }
+
+    /* DASHBOARD */
+    .dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
+    .stat-card { padding: 12px 5px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .stat-card small { font-size: 11px; display: block; text-transform: uppercase; opacity: 0.9; }
+    .stat-card b { font-size: 16px; }
+
+    /* BẢNG DỮ LIỆU CUỘN - ĐÃ FIX HÀNG MỎNG & CỘT GỌN */
+.table-wrap { 
+  flex-grow: 1; 
+  overflow-y: auto; 
+  overflow-x: auto; 
+  background: white; 
+  border-radius: 12px; 
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  position: relative;
+}
+
+table { 
+  width: 100%; 
+  font-size: 15px;      /* Chữ to theo yêu cầu trước đó */
+  border-collapse: collapse; 
+  min-width: 700px;
+  table-layout: fixed; /* 🔑 Ép cố định chiều rộng cột */
+}
+
+/* Cấu hình độ rộng các cột (Tổng 100%) */
+table th:nth-child(1) { width: 30px; } /* Ngày */
+table th:nth-child(2) { width: 15px;  } /* Loại */
+table th:nth-child(3) { width: 50px;  } /* auto là Nội dung (tự giãn) */
+table th:nth-child(4) { width: 30px; } /* Số tiền */
+table th:nth-child(5) { width: 90px;  } /* Thao tác */
+
+thead th { 
+  position: sticky; 
+  top: 0; 
+  background-color: #2d3436 !important; 
+  color: white !important; 
+  z-index: 10; 
+  padding: 4px 8px;    /* 🔑 Giảm chiều cao tiêu đề */
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+/* 🔑 QUAN TRỌNG: Giảm padding của các ô dữ liệu để hàng cực mỏng */
+#tb td {
+  padding: 2px 8px !important; 
+  line-height: 1.2;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+  white-space: nowrap;        /* Giữ nội dung 1 hàng */
+  overflow: hidden;           /* Nếu dài quá sẽ ẩn */
+  text-overflow: ellipsis;    /* Hiện dấu ... nếu dài */
+}
+
+/* Cho phép cột Nội dung được xuống dòng nếu cần, các cột khác giữ 1 dòng */
+#tb td:nth-child(3) {
+  white-space: normal; 
+}
+
+    /* MODAL */
+    .modal-custom {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      display: none; align-items: center; justify-content: center; z-index: 2050;
+    }
+    .modal-custom.active { display: flex; }
+    .modal-box { width: 92%; max-width: 450px; background: white; padding: 25px; border-radius: 20px; }
+
+    /* TIỆN ÍCH */
+    input, select { font-size: 16px !important; }
+    .btn-sm-custom { padding: 6px 2px; font-size: 12px; font-weight: bold; }
+    .disabled { opacity: 0.5; pointer-events: none; }
+
+    @media (min-width: 992px) {
+      body { padding: 15px 0; }
+      .app-container { border-radius: 20px; height: calc(100vh - 30px); }
+    }
+  </style>
 </head>
 <body>
-  <div class="app">
 
-    <!-- HEADER -->
-    <header>
-      <h2>QUẢN LÝ THU – CHI</h2>
-      <div class="header-right">
-        <button id="btnLogin" class="login-btn" onclick="toggleLogin()">Đăng nhập</button>
-      </div>
+<div class="app-container">
+
+  <div class="sticky-top-section">
+    <header class="d-flex justify-content-between align-items-center mb-2">
+      <h5 class="fw-bold m-0 text-primary"><i class="bi bi-bank"></i> QUẢN LÝ THU CHI</h5>
+      <button id="btnLogin" class="btn btn-primary btn-sm px-3 fw-bold" onclick="toggleLogin()">ĐĂNG NHẬP</button>
     </header>
 
-    <!-- DASHBOARD -->
-    <section class="dashboard">
-      <div class="card green">
-        Tổng Thu<br><b id="sThu">0</b>
-      </div>
-      <div class="card red">
-        Tổng Chi<br><b id="sChi">0</b>
-      </div>
-      <div class="card blue">
-        Tồn quỹ<br><b id="sTon">0</b>
-      </div>
+    <section class="dashboard-grid">
+      <div class="stat-card bg-success"><small>Tổng Thu</small><b id="sThu">0</b></div>
+      <div class="stat-card bg-danger"><small>Tổng Chi</small><b id="sChi">0</b></div>
+      <div class="stat-card" style="background-color: #6f42c1;"><small>Tồn Quỹ</small><b id="sTon">0</b></div>
     </section>
 
-    <!-- ACTIONS & FILTER GRID (Layout 1) -->
-    <div class="actions filter-grid">
-      <div class="filter-row">
-        <label>Loại</label>
-        <select id="f_type">
-          <option value="">Tất cả</option>
-          <option value="Thu">Thu</option>
-          <option value="Chi">Chi</option>
-        </select>
+    <div class="bg-light p-2 rounded border mb-2">
+      <div class="row g-2">
+        <div class="col-6">
+          <select id="f_type" class="form-select form-select-sm">
+            <option value="">-- Tất cả loại --</option>
+            <option value="Thu">Thu</option>
+            <option value="Chi">Chi</option>
+          </select>
+        </div>
+        <div class="col-6">
+          <select id="f_mode" class="form-select form-select-sm" onchange="onModeChange()">
+            <option value="all">Tất cả thời gian</option>
+            <option value="date">Theo ngày</option>
+            <option value="range">Khoảng ngày</option>
+            <option value="month">Theo tháng</option>
+            <option value="quarter">Theo quý</option>
+            <option value="year">Theo năm</option>
+          </select>
+        </div>
       </div>
-
-      <div class="filter-row">
-        <label>Kiểu lọc</label>
-        <select id="f_mode" onchange="onModeChange()">
-          <option value="all">Tất cả</option>
-          <option value="date">Theo ngày</option>
-          <option value="range">Khoảng ngày</option>
-          <option value="month">Theo tháng</option>
-          <option value="quarter">Theo quý</option>
-          <option value="year">Theo năm</option>
-        </select>
-      </div>
-
-      <!-- date inputs -->
-      <div class="filter-row" id="f_date_from_row" style="display:none">
-        <label>Từ ngày</label>
-        <input type="date" id="f_from">
-      </div>
-      <div class="filter-row" id="f_date_to_row" style="display:none">
-        <label>Đến ngày</label>
-        <input type="date" id="f_to">
-      </div>
-
-      <!-- month/year -->
-      <div class="filter-row" id="f_year_row" style="display:none">
-        <label>Năm</label>
-        <select id="f_year"></select>
-      </div>
-      <div class="filter-row" id="f_month_from_row" style="display:none">
-        <label>Tháng từ</label>
-        <select id="f_month_from"></select>
-      </div>
-      <div class="filter-row" id="f_month_to_row" style="display:none">
-        <label>Tháng đến</label>
-        <select id="f_month_to"></select>
-      </div>
-
-      <!-- quarter -->
-      <div class="filter-row" id="f_quarter_row" style="display:none">
-        <label>Quý</label>
-        <select id="f_quarter">
-          <option value="1">Quý 1</option>
-          <option value="2">Quý 2</option>
-          <option value="3">Quý 3</option>
-          <option value="4">Quý 4</option>
-        </select>
-      </div>
-
-      <!-- buttons -->
-      <div class="filter-actions" style="display:flex;gap:8px;align-items:end;">
-        <button class="btn-add" onclick="applyFilter()">Lọc</button>
-        <button class="btn-reset" onclick="resetFilter()">Reset</button>
-
-        <button onclick="exportExcel()">Xuất Excel</button>
-        <button onclick="exportPdf()">Xuất PDF</button>
-      </div>
-    </div>
-
-    <!-- search + add button -->
-    <div class="actions" style="margin-top:12px">
-      <button class="btn-add" onclick="openModal()">+ Thêm mới</button>
-      <input id="searchBox" class="search-input" placeholder="Tìm kiếm..." oninput="searchTable()">
-    </div>
-
-    <!-- TABLE -->
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th class="col-date">Ngày</th>
-            <th class="col-type">Loại</th>
-            <th class="col-content">Nội dung</th>
-            <th class="col-amount">Số tiền</th>
-            <th class="col-action">Hành động</th>
-          </tr>
-        </thead>
-        <tbody id="tb"></tbody>
-      </table>
-    </div>
-
-    <!-- LOGIN MODAL -->
-    <div class="modal" id="loginModal" onclick="closeLoginOutside(event)">
-      <div class="box" onclick="event.stopPropagation()">
-        <h3>Đăng nhập</h3>
-        <input id="u" placeholder="Tài khoản">
-        <input id="p" type="password" placeholder="Mật khẩu">
-        <div style="display:flex; gap:8px;">
-          <button id="btnDoLogin" onclick="doLogin()">Đăng nhập</button>
-          <button onclick="closeLogin()">Huỷ</button>
+      
+      <div class="row g-2 mt-1">
+        <div class="col-6" id="f_date_from_row" style="display:none">
+          <label class="small fw-bold" id="lbl_from">Ngày</label>
+          <input type="date" id="f_from" class="form-control form-control-sm">
+        </div>
+        <div class="col-6" id="f_date_to_row" style="display:none">
+          <label class="small fw-bold">Đến ngày</label>
+          <input type="date" id="f_to" class="form-control form-control-sm">
+        </div>
+        <div class="col-6" id="f_year_row" style="display:none">
+          <label class="small fw-bold">Năm</label>
+          <select id="f_year" class="form-select form-select-sm"></select>
+        </div>
+        <div class="col-6" id="f_month_from_row" style="display:none">
+          <label class="small fw-bold" id="lbl_m_from">Tháng</label>
+          <select id="f_month_from" class="form-select form-select-sm"></select>
+        </div>
+        <div class="col-6" id="f_month_to_row" style="display:none">
+          <label class="small fw-bold">Đến tháng</label>
+          <select id="f_month_to" class="form-select form-select-sm"></select>
+        </div>
+        <div class="col-6" id="f_quarter_row" style="display:none">
+          <label class="small fw-bold">Quý</label>
+          <select id="f_quarter" class="form-select form-select-sm">
+            <option value="1">Quý 1</option><option value="2">Quý 2</option>
+            <option value="3">Quý 3</option><option value="4">Quý 4</option>
+          </select>
         </div>
       </div>
     </div>
 
-    <!-- MODAL FORM -->
-    <div id="modalForm" class="modal" onclick="closeModalOutside(event)">
-      <div class="modal-box" onclick="event.stopPropagation()">
-        <h3 id="modalTitle">Thêm dữ liệu</h3>
-
-        <label>Ngày</label>
-        <input type="date" id="m_date">
-
-        <label>Loại</label>
-        <select id="m_type">
-          <option value="Thu">Thu</option>
-          <option value="Chi">Chi</option>
-        </select>
-
-        <label>Nội dung</label>
-        <input id="m_content" placeholder="Nội dung">
-
-        <label>Số tiền</label>
-        <input id="m_amount" type="number" placeholder="0">
-
-        <div style="display:flex; gap:10px;">
-          <button id="m_btnSave" onclick="modalSave()">Lưu</button>
-          <button onclick="closeModal()" class="close-btn">Đóng</button>
-        </div>
+    <div class="row g-1 mb-2">
+      <div class="col-4">
+        <input id="searchBox" class="form-control form-control-sm" placeholder="Tìm nhanh..." oninput="searchTable()">
+      </div>
+      <div class="col-2">
+        <button class="btn btn-info btn-sm w-100 text-white fw-bold" onclick="applyFilter()">LỌC</button>
+      </div>
+      <div class="col-3">
+        <button class="btn btn-outline-secondary btn-sm w-100 fw-bold" onclick="clearFilter()">XÓA LỌC</button>
+      </div>
+      <div class="col-3">
+        <button id="btnAdd" class="btn btn-success btn-sm w-100 fw-bold disabled" onclick="openModal()" disabled>+ THÊM</button>
       </div>
     </div>
 
-    <div id="toast" class="toast"></div>
-
+    <div class="row g-1">
+      <div class="col-3"><button class="btn btn-outline-success btn-sm-custom w-100" onclick="exportExcel()">Excel</button></div>
+      <div class="col-3"><button class="btn btn-outline-danger btn-sm-custom w-100" onclick="exportPDF()">PDF</button></div>
+    <div class="col-6">
+  <a id="sheetLink" href="https://docs.google.com/spreadsheets/d/1GSfropAOsuXe0IBwDCse32WeXTO63YPB_gqBmHr0mBY/edit?gid=998902108#gid=998902108" target="_blank" 
+     class="btn btn-outline-success btn-sm-custom w-100 disabled">
+     <i class="bi bi-google"></i> Google Sheets
+  </a>
   </div>
 
-  <?!= include('Javascript'); ?>
+
+  <div class="table-wrap">
+    <table class="table table-hover align-middle" id="mainTable">
+      <thead>
+        <tr>
+          <th>Ngày</th>
+          <th>Loại</th>
+          <th>Nội dung</th>
+          <th style="text-align:right">Số tiền</th>
+          <th style="text-align:center">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody id="tb"></tbody>
+    </table>
+  </div>
+</div>
+
+<div id="modalForm" class="modal-custom" onclick="closeModalOutside(event)">
+  <div class="modal-box shadow" onclick="event.stopPropagation()">
+    <h4 id="modalTitle" class="fw-bold mb-3 text-center text-primary">CẬP NHẬT DỮ LIỆU</h4>
+    <div class="mb-2"><label class="small fw-bold">Ngày</label><input id="m_date" type="date" class="form-control"></div>
+    <div class="mb-2">
+      <label class="small fw-bold">Loại</label>
+      <select id="m_type" class="form-select"><option value="Thu">Thu</option><option value="Chi">Chi</option></select>
+    </div>
+    <div class="mb-2"><label class="small fw-bold">Nội dung</label><input id="m_content" class="form-control" placeholder="Lý do thu/chi..."></div>
+    <div class="mb-4"><label class="small fw-bold">Số tiền</label><input id="m_amount" type="number" class="form-control" placeholder="0"></div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary btn-lg flex-grow-1 fw-bold shadow-sm" onclick="modalSave()">LƯU</button>
+      <button class="btn btn-secondary btn-lg fw-bold px-4" onclick="closeModal()">ĐÓNG</button>
+    </div>
+  </div>
+</div>
+
+<div id="loginModal" class="modal-custom" onclick="closeLoginOutside(event)">
+  <div class="modal-box shadow" style="max-width: 320px;" onclick="event.stopPropagation()">
+    <h4 class="text-center fw-bold mb-3">XÁC THỰC</h4>
+    <input id="u" class="form-control mb-2" placeholder="Tài khoản">
+    <input id="p" type="password" class="form-control mb-4" placeholder="Mật khẩu">
+    <button class="btn btn-primary w-100 py-2 fw-bold" onclick="doLogin()">ĐĂNG NHẬP</button>
+  </div>
+</div>
+
+<div id="toast" class="toast-custom"></div>
+<?!= include('Javascript'); ?>
 </body>
 </html>
