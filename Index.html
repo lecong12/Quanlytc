@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <?!= include('Css'); ?>
+</head>
+<body>
+  <div class="app">
+
+    <!-- HEADER -->
+    <header>
+      <h2>QUẢN LÝ THU – CHI</h2>
+      <div class="header-right">
+        <button id="btnLogin" class="login-btn" onclick="toggleLogin()">Đăng nhập</button>
+      </div>
+    </header>
+
+    <!-- DASHBOARD -->
+    <section class="dashboard">
+      <div class="card green">
+        Tổng Thu<br><b id="sThu">0</b>
+      </div>
+      <div class="card red">
+        Tổng Chi<br><b id="sChi">0</b>
+      </div>
+      <div class="card blue">
+        Tồn quỹ<br><b id="sTon">0</b>
+      </div>
+    </section>
+
+    <!-- ACTIONS & FILTER GRID (Layout 1) -->
+    <div class="actions filter-grid">
+      <div class="filter-row">
+        <label>Loại</label>
+        <select id="f_type">
+          <option value="">Tất cả</option>
+          <option value="Thu">Thu</option>
+          <option value="Chi">Chi</option>
+        </select>
+      </div>
+
+      <div class="filter-row">
+        <label>Kiểu lọc</label>
+        <select id="f_mode" onchange="onModeChange()">
+          <option value="all">Tất cả</option>
+          <option value="date">Theo ngày</option>
+          <option value="range">Khoảng ngày</option>
+          <option value="month">Theo tháng</option>
+          <option value="quarter">Theo quý</option>
+          <option value="year">Theo năm</option>
+        </select>
+      </div>
+
+      <!-- date inputs -->
+      <div class="filter-row" id="f_date_from_row" style="display:none">
+        <label>Từ ngày</label>
+        <input type="date" id="f_from">
+      </div>
+      <div class="filter-row" id="f_date_to_row" style="display:none">
+        <label>Đến ngày</label>
+        <input type="date" id="f_to">
+      </div>
+
+      <!-- month/year -->
+      <div class="filter-row" id="f_year_row" style="display:none">
+        <label>Năm</label>
+        <select id="f_year"></select>
+      </div>
+      <div class="filter-row" id="f_month_from_row" style="display:none">
+        <label>Tháng từ</label>
+        <select id="f_month_from"></select>
+      </div>
+      <div class="filter-row" id="f_month_to_row" style="display:none">
+        <label>Tháng đến</label>
+        <select id="f_month_to"></select>
+      </div>
+
+      <!-- quarter -->
+      <div class="filter-row" id="f_quarter_row" style="display:none">
+        <label>Quý</label>
+        <select id="f_quarter">
+          <option value="1">Quý 1</option>
+          <option value="2">Quý 2</option>
+          <option value="3">Quý 3</option>
+          <option value="4">Quý 4</option>
+        </select>
+      </div>
+
+      <!-- buttons -->
+      <div class="filter-actions" style="display:flex;gap:8px;align-items:end;">
+        <button class="btn-add" onclick="applyFilter()">Lọc</button>
+        <button class="btn-reset" onclick="resetFilter()">Reset</button>
+
+        <button onclick="exportExcel()">Xuất Excel</button>
+        <button onclick="exportPdf()">Xuất PDF</button>
+      </div>
+    </div>
+
+    <!-- search + add button -->
+    <div class="actions" style="margin-top:12px">
+      <button class="btn-add" onclick="openModal()">+ Thêm mới</button>
+      <input id="searchBox" class="search-input" placeholder="Tìm kiếm..." oninput="searchTable()">
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="col-date">Ngày</th>
+            <th class="col-type">Loại</th>
+            <th class="col-content">Nội dung</th>
+            <th class="col-amount">Số tiền</th>
+            <th class="col-action">Hành động</th>
+          </tr>
+        </thead>
+        <tbody id="tb"></tbody>
+      </table>
+    </div>
+
+    <!-- LOGIN MODAL -->
+    <div class="modal" id="loginModal" onclick="closeLoginOutside(event)">
+      <div class="box" onclick="event.stopPropagation()">
+        <h3>Đăng nhập</h3>
+        <input id="u" placeholder="Tài khoản">
+        <input id="p" type="password" placeholder="Mật khẩu">
+        <div style="display:flex; gap:8px;">
+          <button id="btnDoLogin" onclick="doLogin()">Đăng nhập</button>
+          <button onclick="closeLogin()">Huỷ</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL FORM -->
+    <div id="modalForm" class="modal" onclick="closeModalOutside(event)">
+      <div class="modal-box" onclick="event.stopPropagation()">
+        <h3 id="modalTitle">Thêm dữ liệu</h3>
+
+        <label>Ngày</label>
+        <input type="date" id="m_date">
+
+        <label>Loại</label>
+        <select id="m_type">
+          <option value="Thu">Thu</option>
+          <option value="Chi">Chi</option>
+        </select>
+
+        <label>Nội dung</label>
+        <input id="m_content" placeholder="Nội dung">
+
+        <label>Số tiền</label>
+        <input id="m_amount" type="number" placeholder="0">
+
+        <div style="display:flex; gap:10px;">
+          <button id="m_btnSave" onclick="modalSave()">Lưu</button>
+          <button onclick="closeModal()" class="close-btn">Đóng</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+  </div>
+
+  <?!= include('Javascript'); ?>
+</body>
+</html>
