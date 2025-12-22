@@ -1,410 +1,823 @@
 <script>
 /* ============================================================
-   1. KHAI BÁO BIẾN TOÀN CỤC & TIỆN ÍCH (STATE & UTILS)
-   ============================================================ */
-let isLoggedIn = false;
-let lastRows = [];
-let editId = null;
+    1. KHAI BÁO BIẾN TOÀN CỤC & TIỆN ÍCH (STATE & UTILS)
+    ============================================================ */
+let isLoggedIn = false;      // TRẠNG THÁI ĐĂNG NHẬP CHUNG
+let lastRows = [];           // Dữ liệu gốc
+let editId = null;           // Lưu ID dòng đang sửa
+let currentAction = 'add';   // Trạng thái: 'add' hay 'edit'
+let currentFilterDisplay = 'Toàn bộ các khoản thu chi'; // Biến lưu tiêu chí lọc
 
 const $ = i => document.getElementById(i);
+// ĐỊNH DẠNG: Sử dụng 'vi-VN' để có dấu chấm (.) phân cách hàng nghìn
 const fmt = n => new Intl.NumberFormat('vi-VN').format(n || 0);
 
 /* ============================================================
-   2. QUẢN LÝ ĐĂNG NHẬP (AUTHENTICATION)
-   ============================================================ */
+    2. QUẢN LÝ ĐĂNG NHẬP (AUTHENTICATION)
+    ============================================================ */
 function toggleLogin() {
-  if (isLoggedIn) {
-    isLoggedIn = false;
-    const btn = $('btnLogin');
-    btn.innerText = 'Đăng nhập';
-    btn.classList.remove('logged'); 
-    
-    updateAddBtn();
-    renderTable(lastRows);
-    showToast('Đã đăng xuất', '#666');
-    return;
-  }
-  $('loginModal').classList.add('active');
+    if (isLoggedIn) {
+        // TRẠNG THÁI ĐĂNG XUẤT: Gọi hàm logout() ngay lập tức mà không cần xác nhận
+        logout(); 
+    } else {
+        // TRẠNG THÁI ĐĂNG NHẬP: Mở modal
+        $('loginModal').classList.add('active');
+    }
 }
 
 function doLogin() {
-  const user = $('u').value;
-  const pass = $('p').value;
-  if (!user || !pass) return alert('Vui lòng nhập đầy đủ');
+    const user = $('u').value;
+    const pass = $('p').value;
+    if (!user || !pass) return showToast('Vui lòng nhập đầy đủ', 'orange');
 
-  google.script.run.withSuccessHandler(r => {
-    if (!r.ok) return alert('Sai tài khoản hoặc mật khẩu');
-    isLoggedIn = true;
+    google.script.run.withSuccessHandler(r => {
+        if (!r.ok) return showToast('Sai tài khoản hoặc mật khẩu', '#dc2626');
+        
+        isLoggedIn = true;
+        const btn = $('btnLogin');
+        if (btn) {
+            btn.innerText = 'Đăng xuất';
+            btn.classList.add('logged');
+        }
+        
+        $('loginModal').classList.remove('active');
+        $('u').value = ''; 
+        $('p').value = '';
+
+        updateUI(); 
+        renderTable(lastRows); 
+        showToast('Đăng nhập thành công!', '#16a34a');
+    }).login(user, pass);
+}
+
+function logout() {
+    isLoggedIn = false;
     const btn = $('btnLogin');
-    btn.innerText = 'Đăng xuất';
-    btn.classList.add('logged');
+    if (btn) {
+        btn.innerText = 'Đăng nhập';
+        btn.classList.remove('logged');
+    }
     
-    $('loginModal').classList.remove('active');
-    $('u').value = ''; 
-    $('p').value = '';
-
-    updateAddBtn();
-    renderTable(lastRows);
-    showToast('Đăng nhập thành công!', '#16a34a');
-  }).login(user, pass);
+    updateUI(); 
+    renderTable(lastRows); 
+    showToast('Đã đăng xuất', '#666');
 }
 
 function closeLogin() {
-  $('loginModal').classList.remove('active');
+    $('loginModal').classList.remove('active');
 }
 
 function closeLoginOutside(e) {
-  if (e.target.id === 'loginModal') closeLogin();
+    if (e.target.id === 'loginModal') closeLogin();
 }
 
 /* ============================================================
-   3. TẢI DỮ LIỆU & HIỂN THỊ BẢNG (DATA LOADING & RENDERING)
-   ============================================================ */
-function loadAll(){
-  google.script.run.withSuccessHandler(r=>{
-    lastRows = r || [];
-    renderTable(lastRows);
-  }).listData();
-
-  google.script.run.withSuccessHandler(s=>{
-    $('sThu').innerText = fmt(s.thu);
-    $('sChi').innerText = fmt(s.chi);
-    $('sTon').innerText = fmt(s.ton);
-  }).summary();
+    3. TẢI DỮ LIỆU & HIỂN THỊ BẢNG (DATA LOADING & RENDERING)
+    ============================================================ */
+// SỬA LỖI LOAD: Đảm bảo luồng chạy ổn định
+function loadAll() {
+    // Hiển thị thông báo đang tải (tùy chọn)
+    // showToast("Đang tải dữ liệu...", "#007bff"); 
+    google.script.run
+        .withSuccessHandler(function(data) {
+            lastRows = data; 
+            currentFilterDisplay = 'Toàn bộ các khoản thu chi'; // Gán tiêu chí mặc định
+            renderTable(data); 
+            updateStats(data); 
+            // showToast("Tải dữ liệu thành công", "#16a34a");
+        })
+        .withFailureHandler(function(err) {
+            // Rất QUAN TRỌNG: Bắt lỗi nếu hàm Apps Script không chạy
+            showToast("LỖI: Không thể tải dữ liệu ban đầu. Vui lòng kiểm tra file Code.gs và triển khai lại Web App. Chi tiết: " + err.message, "#dc2626");
+        })
+        .getDataFromServer({mode: 'all'}); 
 }
 
 function renderTable(rows) {
-  const tbody = $('tb');
-  tbody.innerHTML = ''; 
-  
-  rows.forEach(r => {
-    const rowClass = (r.type === 'Chi' || r.type === 'chi') ? 'tr-chi' : '';
-    const disClass = isLoggedIn ? '' : 'icon-disabled';
-    const loginTitle = isLoggedIn ? '' : 'title="Yêu cầu đăng nhập"';
-    const pointerStyle = isLoggedIn ? '' : 'style="pointer-events:none; opacity:0.35;"';
+    const tbody = $('tb');
+    tbody.innerHTML = ''; 
+    
+    rows.forEach(r => {
+        const rowClass = (r.type === 'Chi' || r.type === 'chi') ? 'tr-chi' : '';
+        const disClass = isLoggedIn ? '' : 'icon-disabled';
+        const loginTitle = isLoggedIn ? '' : 'title="Yêu cầu đăng nhập"';
+        const pointerStyle = isLoggedIn ? '' : 'style="pointer-events:none; opacity:0.35;"';
 
-    tbody.insertAdjacentHTML('beforeend', `
-      <tr class="${rowClass}">
-        <td style="white-space: nowrap;">${r.date}</td>
-        <td style="font-weight: 500;">${r.type}</td>
-        <td>${r.content}</td>
-        <td style="text-align:right; font-weight: bold;">${fmt(r.amount)}</td>
-        <td style="text-align:center" onclick="if(!isLoggedIn) showToast('Yêu cầu đăng nhập', '#e67e22')">
-          <button class="${disClass}" ${loginTitle} ${pointerStyle} onclick="openEditModal('${r.id}')">✏️</button>
-          <button class="${disClass}" ${loginTitle} ${pointerStyle} onclick="del('${r.id}')">🗑</button>
-        </td>
-      </tr>
-    `);
-  });
+        // LƯU Ý: Đảm bảo amount được làm sạch trước khi gọi fmt, mặc dù ở đây r.amount là từ sheet nên thường là số hoặc chuỗi số.
+        const amountDisplay = fmt(r.amount); 
+
+        tbody.insertAdjacentHTML('beforeend', `
+            <tr class="${rowClass}">
+                <td style="white-space: nowrap;">${r.date}</td>
+                <td style="font-weight: 500;">${r.type}</td>
+                <td>${r.content}</td>
+                <td style="text-align:right;">${amountDisplay}</td>
+                <td class="action-cell">
+                    <button class="${disClass}" ${loginTitle} ${pointerStyle} onclick="if(isLoggedIn) openEditModal('${r.id}')">✏️</button>
+                    <button class="${disClass}" ${loginTitle} ${pointerStyle} onclick="if(isLoggedIn) del('${r.id}')">🗑</button>
+                </td>
+            </tr>
+        `);
+    });
 }
 
 /* ============================================================
-   4. TÌM KIẾM & TRẠNG THÁI NÚT (SEARCH & UI STATE)
-   ============================================================ */
+    4. TÌM KIẾM & TRẠNG THÁI NÚT (SEARCH & UI STATE)
+    ============================================================ */
 function searchTable(){
-  const k = $('searchBox').value.toLowerCase();
-  document.querySelectorAll('#tb tr').forEach(tr=>{
-    tr.style.display = tr.innerText.toLowerCase().includes(k) ? '' : 'none';
-  });
+    const k = $('searchBox').value.toLowerCase();
+    document.querySelectorAll('#tb tr').forEach(tr=>{
+        tr.style.display = tr.innerText.toLowerCase().includes(k) ? '' : 'none';
+    });
 }
 
-function updateAddBtn() {
-  const btnAdd = $('btnAdd');
-  const btnSheet = $('sheetLink');
-  const loginMsg = "Yêu cầu đăng nhập";
+function updateUI() {
+    const btnAdd = $('btnAdd');
+    const btnSheet = $('sheetLink');
+    const btnExcel = $('btnExportExcel'); // ID nút Excel
+    const btnPDF = $('btnExportPDF');     // ID nút PDF
+    const btnEmail = $('btnOpenEmail');   // ID nút Email
+    const loginMsg = "Yêu cầu đăng nhập";
 
-  if (isLoggedIn) {
-    if (btnAdd) {
-      btnAdd.classList.remove('disabled');
-      btnAdd.disabled = false;
-      btnAdd.title = "";
-    }
-    if (btnSheet) {
-      btnSheet.classList.remove('disabled');
-      btnSheet.style.pointerEvents = "auto";
-      btnSheet.style.opacity = "1";
-      btnSheet.title = "";
-    }
-  } else {
-    if (btnAdd) {
-      btnAdd.classList.add('disabled');
-      btnAdd.disabled = true;
-      btnAdd.title = loginMsg;
-      btnAdd.parentElement.onclick = () => { if(!isLoggedIn) showToast(loginMsg, "orange"); };
-    }
-    if (btnSheet) {
-      btnSheet.classList.add('disabled');
-      btnSheet.style.pointerEvents = "none";
-      btnSheet.style.opacity = "0.5";
-      btnSheet.title = loginMsg;
-    }
-  }
+    // Gom các nút chức năng vào một mảng để xử lý hàng loạt
+    const actionBtns = [
+        { el: btnAdd, type: 'button' },
+        { el: btnExcel, type: 'button' },
+        { el: btnPDF, type: 'button' },
+        { el: btnEmail, type: 'button' },
+        { el: btnSheet, type: 'link' }
+    ];
+
+    actionBtns.forEach(item => {
+        if (!item.el) return;
+
+        if (isLoggedIn) {
+            // MỞ KHÓA
+            item.el.classList.remove('disabled');
+            item.el.title = "";
+            if (item.type === 'button') {
+                item.el.disabled = false;
+                // Xóa bỏ chặn click ở thẻ cha (nếu có)
+                if (item.el.parentElement) item.el.parentElement.onclick = null;
+            } else {
+                item.el.style.pointerEvents = "auto";
+                item.el.style.opacity = "1";
+            }
+        } else {
+            // KHÓA LẠI
+            item.el.classList.add('disabled');
+            item.el.title = loginMsg;
+            if (item.type === 'button') {
+                item.el.disabled = true;
+                // Khi click vào vùng nút bị khóa thì hiện thông báo
+                if (item.el.parentElement) {
+                    item.el.parentElement.onclick = () => { showToast(loginMsg, "orange"); };
+                }
+            } else {
+                item.el.style.pointerEvents = "none";
+                item.el.style.opacity = "0.5";
+            }
+        }
+    });
 }
 
 /* ============================================================
-   5. THÊM, SỬA, XÓA DỮ LIỆU (CRUD OPERATIONS)
-   ============================================================ */
+    5. THÊM, SỬA, XÓA DỮ LIỆU (CRUD OPERATIONS)
+    ============================================================ */
+
 function openModal(){
-  if(!isLoggedIn) return alert('Cần đăng nhập');
-  editId = null;
-  $('modalTitle').innerText = 'Thêm dữ liệu';
-  $('m_date').value = new Date().toISOString().slice(0,10);
-  $('m_type').value = 'Thu';
-  $('m_content').value = '';
-  $('m_amount').value = '';
-  $('modalForm').classList.add('active');
+    if(!isLoggedIn) return showToast('Cần đăng nhập để thêm dữ liệu', 'orange'); 
+    
+    currentAction = 'add'; 
+    editId = null;
+    $('modalTitle').innerText = 'THÊM DỮ LIỆU';
+    $('btnSave').innerText = 'LƯU'; 
+    
+    $('m_date').value = new Date().toISOString().slice(0,10);
+    $('m_type').value = 'Chi';
+    $('m_content').value = '';
+    $('m_amount').value = ''; 
+    
+    $('modalForm').classList.add('active');
 }
 
 function openEditModal(id){
-  if(!isLoggedIn) return;
-  google.script.run.withSuccessHandler(d=>{
-    if(!d) return alert('Không tìm thấy dữ liệu');
-    editId = d.id;
-    $('modalTitle').innerText = 'Sửa dữ liệu';
-    $('m_date').value = d.date;
-    $('m_type').value = d.type;
-    $('m_content').value = d.content;
-    $('m_amount').value = d.amount;
-    $('modalForm').classList.add('active');
-  }).getItemById(id);
+    if(!isLoggedIn) return showToast('Cần đăng nhập để sửa dữ liệu', 'orange'); 
+    
+    google.script.run.withSuccessHandler(d=>{
+        if(!d) return alert('Không tìm thấy dữ liệu');
+        
+        currentAction = 'edit'; 
+        editId = d.id;
+        $('modalTitle').innerText = 'SỬA DỮ LIỆU';
+        $('btnSave').innerText = 'CẬP NHẬT'; 
+        
+        $('m_date').value = d.date;
+        $('m_type').value = d.type;
+        $('m_content').value = d.content;
+        
+        const amountInput = $('m_amount');
+        amountInput.value = d.amount; 
+        formatAmount(amountInput);    
+        
+        $('modalForm').classList.add('active');
+    }).getItemById(id);
 }
 
-function modalSave(){
-  if(!isLoggedIn) return;
-  const o = {
-    id: editId,
-    date: $('m_date').value,
-    type: $('m_type').value,
-    content: $('m_content').value,
-    amount: Number($('m_amount').value)
-  };
-  const fn = editId ? 'updateRow' : 'addRow';
-  const msg = editId ? 'Đã cập nhật' : 'Đã thêm dữ liệu thành công';
-  const color = editId ? '#2563eb' : '#16a34a';
+function modalSave() {
+    if (!isLoggedIn) return showToast('Cần đăng nhập để lưu', 'orange'); 
+    
+    const btn = $('btnSave');
+    if (btn && btn.disabled) return; 
 
-  google.script.run.withSuccessHandler(()=>{
-    closeModal();
-    loadAll();
-    showToast(msg, color);
-  })[fn](o);
+    const rawAmount = $('m_amount').value.replace(/\D/g, ''); 
+    
+    if (!rawAmount || !$('m_date').value) {
+        return showToast("Vui lòng nhập Ngày và Số tiền", 'red');
+    }
+
+    const o = {
+        id: editId,
+        date: $('m_date').value,
+        type: $('m_type').value,
+        content: $('m_content').value,
+        amount: Number(rawAmount) 
+    };
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = "Đang xử lý...";
+        btn.style.opacity = "0.5";
+    }
+
+    const fn = currentAction === 'edit' ? 'updateRow' : 'addRow';
+    const msg = currentAction === 'edit' ? 'Đã cập nhật dữ liệu' : 'Đã thêm dữ liệu thành công';
+    const color = currentAction === 'edit' ? '#2563eb' : '#16a34a';
+    const originalText = currentAction === 'edit' ? "CẬP NHẬT" : "LƯU";
+
+    google.script.run
+        .withSuccessHandler(() => {
+            closeModal();
+            applyFilter();
+            showToast(msg, color); 
+
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = originalText;
+                btn.style.opacity = "1";
+            }
+        })
+        .withFailureHandler((err) => {
+            showToast("Lỗi: " + err.message, "#dc2626");
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = "Thử lại";
+                btn.style.opacity = "1";
+            }
+        })[fn](o);
 }
 
 function closeModal(){
-  $('modalForm').classList.remove('active');
+    $('modalForm').classList.remove('active');
 }
 
 function closeModalOutside(e){
-  if(e.target.id === 'modalForm') closeModal();
+    if(e.target.id === 'modalForm') closeModal();
 }
 
 function del(id){
-  if(!isLoggedIn) return;
-  if(!confirm('Chắc chắn xóa dòng này?')) return;
-  google.script.run.withSuccessHandler(() => {
-    loadAll();
-    showToast("Đã xóa dữ liệu", "#dc2626");
-  }).deleteRow(id);
+    if(!isLoggedIn) return showToast('Cần đăng nhập để xóa', 'orange'); 
+    
+    if(!confirm('Chắc chắn xóa dòng này?')) return;
+    google.script.run.withSuccessHandler(() => {
+        loadAll();
+        showToast("Đã xóa dữ liệu", "#dc2626");
+    }).deleteRow(id);
 }
 
 /* ============================================================
-   6. LOGIC BỘ LỌC NÂNG CAO (FILTER SYSTEM)
-   ============================================================ */
+    6. LOGIC BỘ LỌC NÂNG CAO (FILTER SYSTEM)
+    ============================================================ */
 function initFilterDropdowns() {
-  const yearSelect = $('f_year');
-  const monthFrom = $('f_month_from');
-  const monthTo = $('f_month_to');
+    const yearSelect = $('f_year');
+    const monthFrom = $('f_month_from');
+    const monthTo = $('f_month_to');
 
-  if (yearSelect) {
-    yearSelect.innerHTML = '';
-    const currentYear = new Date().getFullYear();
-    for (let i = currentYear - 5; i <= currentYear + 5; i++) {
-      let opt = document.createElement('option');
-      opt.value = i; opt.innerHTML = i;
-      if (i === currentYear) opt.selected = true;
-      yearSelect.appendChild(opt);
+    if (yearSelect) {
+        yearSelect.innerHTML = '';
+        const currentYear = new Date().getFullYear();
+        for (let i = currentYear - 5; i <= currentYear + 5; i++) {
+            let opt = document.createElement('option');
+            opt.value = i; opt.innerHTML = i;
+            if (i === currentYear) opt.selected = true;
+            yearSelect.appendChild(opt);
+        }
     }
-  }
 
-  if (monthFrom && monthTo) {
-    monthFrom.innerHTML = ''; monthTo.innerHTML = '';
-    for (let i = 1; i <= 12; i++) {
-      let optFrom = document.createElement('option');
-      let optTo = document.createElement('option');
-      optFrom.value = i; optFrom.innerHTML = 'Tháng ' + i;
-      optTo.value = i; optTo.innerHTML = 'Tháng ' + i;
-      monthFrom.appendChild(optFrom);
-      monthTo.appendChild(optTo);
+    if (monthFrom && monthTo) {
+        monthFrom.innerHTML = ''; monthTo.innerHTML = '';
+        for (let i = 1; i <= 12; i++) {
+            let optFrom = document.createElement('option');
+            let optTo = document.createElement('option');
+            optFrom.value = i; optFrom.innerHTML = 'Tháng ' + i;
+            optTo.value = i; optTo.innerHTML = 'Tháng ' + i;
+            monthFrom.appendChild(optFrom);
+            monthTo.appendChild(optTo);
+        }
+        const currentMonth = new Date().getMonth() + 1;
+        monthFrom.value = 1; 
+        monthTo.value = currentMonth; 
     }
-    const currentMonth = new Date().getMonth() + 1;
-    monthFrom.value = currentMonth;
-    monthTo.value = currentMonth;
-  }
 }
 
 function onModeChange() {
-  const mode = $('f_mode').value;
-  const config = {
-    'f_date_from_row': ['date', 'range'],
-    'f_date_to_row': ['range'],
-    'f_year_row': ['month', 'quarter', 'year'],
-    'f_month_from_row': ['month'],
-    'f_month_to_row': ['month'],
-    'f_quarter_row': ['quarter']
-  };
+    const mode = $('f_mode').value;
+    const config = {
+        'f_date_from_row': ['date', 'range'],
+        'f_date_to_row': ['range'],
+        'f_year_row': ['month', 'quarter', 'year'],
+        'f_month_from_row': ['month'],
+        'f_month_to_row': ['month'],
+        'f_quarter_row': ['quarter']
+    };
 
-  for (let id in config) {
-    const el = $(id);
-    if (el) el.style.display = config[id].includes(mode) ? 'block' : 'none';
-  }
+    for (let id in config) {
+        const el = $(id);
+        if (el) el.style.display = config[id].includes(mode) ? 'block' : 'none';
+    }
 
-  const lblFrom = $('lbl_from');
-  if (lblFrom) lblFrom.innerText = (mode === 'range') ? 'Từ ngày' : 'Ngày';
+    const lblFrom = $('lbl_from');
+    if (lblFrom) lblFrom.innerText = (mode === 'range') ? 'Từ ngày' : 'Ngày';
+}
+
+function createFilterCriteria(filterData) {
+    let criteria = '';
+    const typeText = filterData.type && filterData.mode !== 'all' ? `Loại: ${filterData.type} cho ` : '';
+
+    if (filterData.mode === 'all') {
+        criteria = 'Toàn bộ các khoản thu chi';
+    } else if (filterData.mode === 'year') {
+        criteria = `Năm ${filterData.year}`;
+    } else if (filterData.mode === 'month') {
+        const y = filterData.year;
+        const mFrom = filterData.monthFrom;
+        const mTo = filterData.monthTo;
+        if (mFrom === mTo) {
+            criteria = `Tháng ${mFrom} năm ${y}`;
+        } else {
+            criteria = `Từ tháng ${mFrom} đến tháng ${mTo} năm ${y}`;
+        }
+    } else if (filterData.mode === 'quarter') {
+        criteria = `Quý ${filterData.quarter} năm ${filterData.year}`;
+    } else if (filterData.mode === 'date') {
+        criteria = `Ngày ${filterData.dateFrom}`;
+    } else if (filterData.mode === 'range') {
+        criteria = `Từ ngày ${filterData.dateFrom} đến ngày ${filterData.dateTo}`;
+    }
+    
+    return filterData.mode === 'all' ? criteria : typeText + criteria;
 }
 
 function applyFilter() {
-  const filterData = {
-    type: $('f_type').value,
-    mode: $('f_mode').value,
-    dateFrom: $('f_from').value,
-    dateTo: $('f_to').value,
-    year: $('f_year').value,
-    monthFrom: $('f_month_from').value,
-    monthTo: $('f_month_to').value,
-    quarter: $('f_quarter').value
-  };
+    const filterData = {
+        type: $('f_type').value,
+        mode: $('f_mode').value,
+        dateFrom: $('f_from').value,
+        dateTo: $('f_to').value,
+        year: $('f_year').value,
+        monthFrom: $('f_month_from').value,
+        monthTo: $('f_month_to').value,
+        quarter: $('f_quarter').value
+    };
 
-  const btn = event.currentTarget;
-  const originalText = btn.innerText;
-  btn.innerText = "Đang lọc...";
-  btn.disabled = true;
+    currentFilterDisplay = createFilterCriteria(filterData);
+    
+    // Kiểm tra nếu sự kiện đến từ nút bấm thì mới đổi text nút
+    const btn = event && event.currentTarget ? event.currentTarget : null;
+    const originalText = btn ? btn.innerText : "";
+    if(btn) {
+        btn.innerText = "Đang lọc...";
+        btn.disabled = true;
+    }
 
-  google.script.run
-    .withSuccessHandler(function(data) {
-      renderTable(data); 
-      btn.innerText = originalText;
-      btn.disabled = false;
-      showToast("Đã cập nhật dữ liệu bộ lọc");
-    })
-    .withFailureHandler(function(err) {
-      btn.innerText = originalText;
-      btn.disabled = false;
-      showToast("Lỗi: " + err.message, "red");
-    })
-    .getDataFromServer(filterData); 
+    google.script.run
+        .withSuccessHandler(function(data) {
+            if (data && data.length > 0) {
+                // --- THÊM LOGIC SẮP XẾP VÀO ĐÂY ---
+                data.sort((a, b) => {
+                    // Cột B (index 1) là Ngày tháng
+                    const parseDate = (v) => {
+                        if (!v) return 0;
+                        if (v instanceof Date) return v.getTime();
+                        // Nếu là chuỗi dd/mm/yyyy
+                        if (typeof v === 'string' && v.includes('/')) {
+                            const p = v.split('/');
+                            return new Date(p[2], p[1]-1, p[0]).getTime();
+                        }
+                        return new Date(v).getTime() || 0;
+                    };
+                    return parseDate(b.date || b[1]) - parseDate(a.date || a[1]);
+                });
+            }
+
+            renderTable(data); 
+            updateStats(data); 
+
+            if(btn) {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+            showToast("Đã lọc dữ liệu", "#007bff");
+        })
+        .withFailureHandler(function(err) {
+            if(btn) {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+            showToast("Lỗi lọc: " + err.message, "red");
+        })
+        .getDataFromServer(filterData); 
+}
+
+function updateStats(dataList) {
+    let thu = 0, chi = 0;
+    dataList.forEach(r => {
+        let val = Number(r.amount.toString().replace(/\./g, '').replace(/,/g, '')) || 0; 
+        if (r.type === 'Thu') thu += val;
+        else if (r.type === 'Chi') chi += val;
+    });
+
+    const ton = thu - chi;
+    $('sThu').innerText = fmt(thu);
+    $('sChi').innerText = fmt(chi);
+    $('sTon').innerText = fmt(ton);
+
+    const cardTon = $('sTon').parentElement;
+    if (ton < 0) {
+        cardTon.style.backgroundColor = "#dc2626"; 
+    } else {
+        cardTon.style.backgroundColor = "#6f42c1"; 
+    }
 }
 
 function clearFilter() {
-  if($('searchBox')) $('searchBox').value = '';
-  if($('f_type')) $('f_type').value = '';
-  if($('f_mode')) $('f_mode').value = 'all';
-  
-  onModeChange(); 
-  if (lastRows && lastRows.length > 0) {
-    renderTable(lastRows); 
-  } else {
-    loadAll();
-  }
-  showToast("Đã xóa tất cả bộ lọc");
+    if($('searchBox')) $('searchBox').value = '';
+    if($('f_type')) $('f_type').value = '';
+    if($('f_mode')) $('f_mode').value = 'all';
+    
+    onModeChange(); 
+    
+    currentFilterDisplay = 'Toàn bộ các khoản thu chi';
+    
+    if (lastRows && lastRows.length > 0) {
+        renderTable(lastRows); 
+        updateStats(lastRows); 
+    } else {
+        loadAll(); 
+    }
+    
+    showToast(" Đã xóa bộ lọc, hiển thị tất cả dữ liệu", "#e67e22");
 }
 
 /* ============================================================
-   7. XUẤT DỮ LIỆU (EXPORT EXCEL & PDF)
-   ============================================================ */
+    7. XUẤT DỮ LIỆU (EXPORT EXCEL & PDF)
+    ============================================================ */
 function exportExcel() {
-  try {
-    const data = [];
+    try {
+        const data = [];
+        data.push(["BÁO CÁO THU CHI"]);
+        data.push([]); 
+        
+        data.push(["Tiêu chí lọc:", currentFilterDisplay]);
+        data.push([]); 
 
-    // 1. Thêm Tiêu đề báo cáo (Gộp ô sẽ làm ở bước sau)
-    data.push(["BÁO CÁO THU CHI"]); 
-    data.push([]); // Dòng trống để giãn cách
+        const tongThu = $('sThu') ? $('sThu').innerText : "0";
+        const tongChi = $('sChi') ? $('sChi').innerText : "0";
+        const tonQuy = $('sTon') ? $('sTon').innerText : "0";
 
-    // 2. Thêm Tiêu đề cột
-    data.push(["Ngày tháng", "Loại", "Nội dung", "Số tiền"]);
+        data.push(["Tổng thu:", tongThu]);
+        data.push(["Tổng chi:", tongChi]);
+        data.push(["Tồn quỹ:", tonQuy]);
+        data.push([]); 
 
-    // 3. Lấy dữ liệu từ thẻ <tbody> (Nơi chứa các hàng r.date, r.type...)
-    // Thay 'tb' bằng ID chính xác của thẻ <tbody> trong HTML của bạn
-    const tbody = document.getElementById("tb");
-    const rows = tbody.querySelectorAll("tr");
+        data.push(["Ngày tháng", "Loại", "Nội dung", "Số tiền"]);
 
-    if (rows.length === 0) {
-      showToast("Không có dữ liệu để xuất!", "#e67e22");
-      return;
+        const rows = document.getElementById("tb").querySelectorAll("tr");
+        rows.forEach(row => {
+            const cols = row.querySelectorAll("td");
+            if (cols.length >= 4) {
+                data.push([
+                    cols[0].innerText.trim(), 
+                    cols[1].innerText.trim(), 
+                    cols[2].innerText.trim(), 
+                    cols[3].innerText.trim()
+                ]);
+            }
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }]; 
+        ws['!cols'] = [{ wch: 18 }, { wch: 10 }, { wch: 45 }, { wch: 18 }];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Báo cáo");
+        
+        const now = new Date();
+        const dateStr = now.getDate().toString().padStart(2, '0') + '-' + 
+                        (now.getMonth() + 1).toString().padStart(2, '0') + '-' + 
+                        now.getFullYear();
+        const fileName = `Bao_Cao_Thu_Chi_${dateStr}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+
+        showToast("Đã xuất Excel kèm thông tin tổng kết!", "#16a34a");
+    } catch (e) {
+        console.error(e);
+        alert("Lỗi xuất Excel: " + e.message);
     }
-
-    // 4. Lặp qua từng hàng để lấy 4 cột đầu tiên
-    rows.forEach(row => {
-      const cols = row.querySelectorAll("td");
-      // Chỉ lấy dữ liệu nếu hàng có đủ số cột
-      if (cols.length >= 4) {
-        data.push([
-          cols[0].innerText.trim(), // Ngày
-          cols[1].innerText.trim(), // Loại
-          cols[2].innerText.trim(), // Nội dung
-          cols[3].innerText.trim()  // Số tiền (dạng văn bản có dấu phân cách)
-        ]);
-      }
-    });
-
-    // 5. Tạo Worksheet từ mảng dữ liệu (Array of Arrays)
-    const ws = XLSX.utils.aoa_to_sheet(data);
-
-    // 6. Cấu hình gộp ô cho tiêu đề "BÁO CÁO THU CHI" (Hàng 1, từ Cột A đến D)
-    ws['!merges'] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }
-    ];
-
-    // 7. Định dạng độ rộng cột (wch: width character)
-    ws['!cols'] = [
-      { wch: 15 }, // Ngày
-      { wch: 10 }, // Loại
-      { wch: 40 }, // Nội dung
-      { wch: 15 }  // Số tiền
-    ];
-
-    // 8. Tạo Workbook và tải file
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Báo cáo");
-    
-    const dateStr = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(wb, `Bao_Cao_Thu_Chi_${dateStr}.xlsx`);
-
-    showToast("Đã xuất báo cáo thành công!", "#16a34a");
-  } catch (e) {
-    console.error("Lỗi Excel:", e);
-    alert("Không thể lấy dữ liệu bảng. Hãy kiểm tra ID 'tb'");
-  }
 }
 
 function exportPDF() {
-  const element = document.querySelector('table');
-  const win = window.open('', '', 'height=700,width=900');
-  win.document.write('<html><head><title>Xuất PDF</title>');
-  win.document.write('<style>table { width: 100%; border-collapse: collapse; font-size: 12px; } th, td { border: 1px solid black; padding: 4px; text-align: left; } .tr-chi td { color: red; }</style>');
-  win.document.write('</head><body>');
-  win.document.write('<h3>DANH SÁCH THU CHI</h3>');
-  win.document.write(element.outerHTML);
-  win.document.write('</body></html>');
-  win.document.close();
-  setTimeout(() => win.print(), 500);
-}
+    const tbody = document.getElementById('tb');
+    const rows = tbody.querySelectorAll('tr');
 
+    if (rows.length === 0) {
+        showToast("Không có dữ liệu để xuất PDF!", "#dc2626");
+        return;
+    }
+
+    const thu = $('sThu') ? $('sThu').innerText : "0";
+    const chi = $('sChi') ? $('sChi').innerText : "0";
+    const ton = $('sTon') ? $('sTon').innerText : "0";
+    const criteriaText = currentFilterDisplay;
+    const criteriaTextLower = criteriaText.toLowerCase();
+
+    const element = document.createElement('div');
+    element.innerHTML = `
+        <h2 style="text-align: center; text-transform: uppercase; margin-bottom: 5px; font-weight: bold; font-family: Arial, sans-serif; font-size: 16px;">
+            BÁO CÁO THU CHI
+        </h2>
+        
+        <p style="text-align: center; font-family: Arial, sans-serif; font-size: 12px; margin-bottom: 15px; font-weight: bold;">
+            ${criteriaTextLower}
+        </p> 
+        
+        <div style="margin-bottom: 15px; font-family: Arial, sans-serif; font-size: 12px; line-height: 1.5;">
+            <div><b>Tổng thu:</b> ${thu}</div>
+            <div><b>Tổng chi:</b> ${chi}</div>
+            <div style="color: ${ton.includes('-') ? '#dc2626' : '#6f42c1'}; font-weight: bold;">
+                <b>Tồn quỹ:</b> ${ton}
+            </div>
+        </div>
+
+        <style>
+            table { 
+                width: 100%; 
+                border-collapse: collapse; 
+                table-layout: fixed; /* BẮT BUỘC để chiều rộng cột hoạt động */
+                font-family: Arial, sans-serif; 
+                font-size: 11px;
+            }
+            th, td { 
+                border: 0.5pt solid #ccc; 
+                padding: 4px; 
+                font-size: 11px;
+                word-wrap: break-word; 
+                font-weight: normal !important; 
+            }
+            th { 
+                background-color: #f8f9fa; 
+                text-transform: uppercase; 
+                text-align: center; 
+                font-weight: bold !important; 
+                color: #000; 
+            }
+            .text-red-only { color: #b91c1c !important; font-weight: normal !important; }
+            .center { text-align: center; }
+            .right { text-align: right; }
+            
+            .signature-section {
+                margin-top: 20px;
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end; 
+                padding-right: 50px;
+                font-family: Arial, sans-serif;
+            }
+            .signature-title { font-size: 12px; margin-bottom: 50px; text-align: center; } 
+            .signature-name { font-size: 13px; font-weight: bold; text-align: center; }
+        </style>
+    `;
+
+    let tableHTML = `
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 15%">Ngày</th>
+                    <th style="width: 8%">Loại</th>
+                    <th style="width: 62%">Nội dung</th>
+                    <th style="width: 15%">Số tiền</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    rows.forEach(row => {
+        const cols = row.querySelectorAll('td');
+        if (cols.length >= 4) {
+            const typeText = cols[1].innerText.trim();
+            const isChi = typeText === 'Chi';
+            const rowStyleClass = isChi ? 'class="text-red-only"' : '';
+            
+            tableHTML += `
+                <tr ${rowStyleClass}>
+                    <td class="center">${cols[0].innerText}</td>
+                    <td class="center">${cols[1].innerText}</td>
+                    <td>${cols[2].innerText}</td>
+                    <td class="right">${cols[3].innerText}</td>
+                </tr>
+            `;
+        }
+    });
+
+    tableHTML += `</tbody></table>`;
+    
+    const signatureHTML = `
+        <div class="signature-section">
+            <div class="signature-title">    ...     </div>
+            <div class="signature-name">     ...     </div>
+        </div>
+    `;
+
+    element.innerHTML += tableHTML + signatureHTML;
+
+    const now = new Date();
+    const dateStr = now.getDate().toString().padStart(2, '0') + '-' + 
+                    (now.getMonth() + 1).toString().padStart(2, '0') + '-' + 
+                    now.getFullYear();
+    const timeStr = now.getHours().toString().padStart(2, '0') + 'h' + 
+                    now.getMinutes().toString().padStart(2, '0');
+
+    const opt = {
+        // LỀ TRANG (mm): [trên, trái, dưới, phải]
+        margin: [20, 10, 20, 10], 
+        filename: `BCTC_${dateStr}_${timeStr}.pdf`, 
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    showToast("Đang tạo file PDF...", "#2563eb");
+    html2pdf().set(opt).from(element).save();
+}
 /* ============================================================
-   8. THÔNG BÁO & KHỞI TẠO (TOAST & INIT)
-   ============================================================ */
+    8. THÔNG BÁO & KHỞI TẠO (TOAST & INIT)
+    ============================================================ */
 function showToast(msg, color = "#333") {
-  const toast = $('toast');
-  if (toast) {
-    toast.innerText = msg;
-    toast.style.backgroundColor = color;
-    toast.className = "toast show";
-    setTimeout(() => { toast.className = "toast"; }, 3000);
-  }
+    const toast = $('toast');
+    if (toast) {
+        toast.innerText = msg;
+        toast.style.backgroundColor = color;
+        toast.className = "toast show";
+        setTimeout(() => { toast.className = "toast"; }, 1000); 
+    }
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  updateAddBtn();
-  loadAll();
-  initFilterDropdowns();
-  onModeChange(); 
+    updateUI(); 
+    loadAll(); // GỌI HÀM LOAD DỮ LIỆU BAN ĐẦU
+    initFilterDropdowns();
+    onModeChange(); 
+    
+    const btnLogin = $('btnLogin');
+    if (btnLogin && !btnLogin.onclick) {
+        btnLogin.onclick = toggleLogin;
+    }
 });
+
+/* ============================================================
+    9. PHÂN TÁCH DẤU CHẤM HÀNG NGHÌN (FORMATTING)
+    ============================================================ */
+function formatAmount(input) {
+  let value = input.value.replace(/\D/g, ''); 
+  
+  if (value) {
+    let formattedValue = new Intl.NumberFormat('vi-VN').format(value); 
+    input.value = formattedValue;
+  }
+}
+
+// Thêm vào bên trong window.addEventListener('DOMContentLoaded', ...):
+if ($('btnLogin')) {
+    $('btnLogin').addEventListener('click', () => setTimeout(autofillLogin, 100));
+}
+/* ============================================================
+    10. TỰ ĐIỀN THÔNG TIN ĐĂNG NHẬP
+   ============================================================ */
+const DEFAULT_USERNAME = "thuy"; 
+const DEFAULT_PASSWORD = "1393"; 
+
+function autofillLogin() {
+    const usernameInput = $('u'); 
+    const passwordInput = $('p'); 
+
+    if (usernameInput && passwordInput) {
+        usernameInput.value = DEFAULT_USERNAME;
+        passwordInput.value = DEFAULT_PASSWORD;
+        passwordInput.focus(); 
+        console.log('Đã tự động điền: thuy / 1393');
+    }
+}
+
+/* ============================================================
+    11. HÀM XỬ LÝ GỬI EMAIL TRÊN GIAO DIỆN
+   ============================================================ */
+function openEmailModal() {
+  const modal = $('commonModal');
+  if(!modal) return alert("Lỗi: Không tìm thấy khung Modal 'commonModal' trong HTML!");
+  
+  modal.style.display = 'flex';
+  $('modalTitle').innerText = "📧 GỬI BÁO CÁO QUA EMAIL";
+  
+  const savedEmail = localStorage.getItem('lastUsedEmail') || "";
+
+  // Sử dụng innerHTML để dựng giao diện bên trong modal
+  const modalBody = $('modalBody');
+  const modalFooter = $('modalFooter');
+  
+  if(modalBody) {
+    modalBody.innerHTML = `
+      <div style="padding: 15px;">
+        <label style="font-weight: bold; display: block; margin-bottom: 5px;">Email người nhận:</label>
+        <input type="email" id="txtEmailTarget" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;" value="${savedEmail}" placeholder="nhap-email@gmail.com">
+        <p style="color: #666; font-size: 11px; margin-top: 8px;">* Hệ thống sẽ gửi toàn bộ bảng dữ liệu đang hiển thị.</p>
+      </div>
+    `;
+  }
+  
+  if(modalFooter) {
+    modalFooter.innerHTML = `
+      <button onclick="closeCommonModal()" style="padding: 5px 15px; cursor: pointer;">Hủy</button>
+      <button onclick="processSendEmail()" id="btnConfirmEmail" style="padding: 5px 15px; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">Gửi</button>
+    `;
+  }
+}
+
+function processSendEmail() {
+  const emailInput = $('txtEmailTarget') ? $('txtEmailTarget').value.trim() : "";
+  if (!emailInput || !emailInput.includes('@')) {
+    return showToast("Vui lòng nhập chính xác địa chỉ Email!", "orange");
+  }
+
+  localStorage.setItem('lastUsedEmail', emailInput);
+
+  const btn = $('btnConfirmEmail');
+  btn.innerText = "⏳ Đang gửi...";
+  btn.disabled = true;
+
+  // Lấy dữ liệu bảng
+  const tableData = [];
+  const rows = document.querySelectorAll("#tb tr");
+  rows.forEach(row => {
+    const cols = row.querySelectorAll("td");
+    if (cols.length >= 4) {
+      tableData.push({
+        date: cols[0].innerText,
+        type: cols[1].innerText,
+        content: cols[2].innerText,
+        amount: cols[3].innerText
+      });
+    }
+  });
+
+  // 🔑 LẤY 3 CON SỐ ĐÃ TÍNH Ở BỘ LỌC
+  const summary = {
+  thu: document.getElementById('sThu').innerText,
+  chi: document.getElementById('sChi').innerText,
+  ton: document.getElementById('sTon').innerText
+};
+console.log("Dữ liệu tổng gửi đi:", summary); 
+
+  google.script.run
+    .withSuccessHandler(res => {
+      btn.innerText = "Gửi";
+      btn.disabled = false;
+      if (res.ok) {
+        showToast("✅ Đã gửi Email thành công!", "#16a34a");
+        closeCommonModal();
+      } else {
+        alert("❌ Lỗi: " + res.error);
+      }
+    })
+    .withFailureHandler(err => {
+      btn.innerText = "Gửi";
+      btn.disabled = false;
+      alert("❌ Lỗi kết nối: " + err.message);
+    })
+    // 🔑 GỬI THÊM BIẾN SUMMARY SANG SERVER
+    .sendEmailFromApp(tableData, emailInput, summary); 
+}
+
+function closeCommonModal() {
+  const modal = $('commonModal');
+  if(modal) modal.style.display = 'none';
+}
+
 </script>

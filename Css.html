@@ -1,7 +1,7 @@
 <style>
   /* =====================================================
-   RESET & BASE
-===================================================== */
+    1. RESET & BASE
+  ===================================================== */
   * {
     box-sizing: border-box;
   }
@@ -10,7 +10,7 @@
     margin: 0;
     background: #f3f4f6;
     font-family: Arial, sans-serif;
-    padding: 0px;
+    padding: 0;
     touch-action: manipulation;
   }
 
@@ -21,8 +21,8 @@
   }
 
   /* =====================================================
-   HEADER (CỐ ĐỊNH)
-===================================================== */
+    2. HEADER (CỐ ĐỊNH & LOGIN)
+  ===================================================== */
   header {
     position: sticky;
     top: 0;
@@ -46,67 +46,65 @@
     gap: 8px;
   }
 
-  .login-btn {
-    padding: 8px 14px;
+  /* Nút Đăng nhập/Đăng xuất */
+  #btnLogin {
+    padding: 4px 10px;
     border: none;
-    border-radius: 6px;
+    border-radius: 4px;
     font-weight: bold;
     cursor: pointer;
-    background: #2563eb;
+    background-color: #2563eb; /* Màu gốc: Xanh */
     color: #fff;
     z-index: 100000;
+    transition: 0.3s;
   }
 
-  .login-btn.logged {
-    background: #dc2626;
+  /* Khi đã đăng nhập (Cam) */
+  #btnLogin.logged {
+    background-color: #ff6600  !important;
+    color: #ffffff !important;
   }
 
   /* =====================================================
-   DASHBOARD (3 CARD LUÔN 1 HÀNG)
-===================================================== */
+    3. DASHBOARD (3 CARD)
+  ===================================================== */
   .dashboard {
     position: sticky;
-    top: 56px;
+    top: 32px; /* Dưới header */
     z-index: 9999;
     background: #f3f4f6;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    margin: 12px 0;
+    gap: 8px;
+    margin: 2px 0;
   }
 
   .card {
-    padding: 14px;
-    border-radius: 8px;
+    padding: 2px 10px;
+    border-radius: 4px;
     color: #fff;
     text-align: center;
-    font-size: 16px;
+    font-size: 14px;
   }
 
-  .green {
-    background: #16a34a;
-  }
+  
+  .green { background: #16a34a; }
+  .red { background: #dc2626; }
+  .blue { background: #2563eb; }
 
-  .red {
-    background: #dc2626;
-  }
-
-  .blue {
-    background: #2563eb;
-  }
-
+ 
   /* =====================================================
-   FILTER + ACTIONS (CỐ ĐỊNH)
-===================================================== */
+    4. FILTER & ACTIONS (CỐ ĐỊNH)
+  ===================================================== */
   .actions {
     position: sticky;
-    top: 120px;
+    top: 100px; /* Dưới dashboard */
     z-index: 9998;
     background: #f3f4f6;
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-    padding-bottom: 8px;
+    padding-bottom: 4px;
   }
 
   .filter-grid {
@@ -132,7 +130,6 @@
     width: 100%;
   }
 
-  /* FILTER BUTTONS */
   .filter-actions {
     display: flex;
     gap: 8px;
@@ -140,11 +137,11 @@
   }
 
   /* =====================================================
-   BUTTONS
-===================================================== */
+    5. NÚT THÊM MỚI (btn-add)
+  ===================================================== */
   .btn-add {
     background: #2563eb;
-    color: #fff; lớp
+    color: #fff;
     padding: 8px 14px;
     border-radius: 8px;
     border: none;
@@ -158,7 +155,7 @@
     opacity: 0.95;
   }
 
-  /* DISABLED (LOGOUT) */
+  /* Trạng thái Disabled (khi là User) */
   .btn-add.disabled {
     background: #9ca3af !important;
     opacity: 0.55;
@@ -166,489 +163,299 @@
     pointer-events: none;
     filter: grayscale(0.4);
   }
-
-  /* =====================================================
-   SEARCH + ADD (1 HÀNG)
+/* =====================================================
+  6. TABLE & CUSTOM ROW STYLES (ĐÃ TỐI ƯU CHIỀU RỘNG CỘT)
 ===================================================== */
-  .search-add-row {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    margin: 10px 0;
-  }
-
-  .search-input {
-    flex: 1;
-    height: 34px;
-    padding: 6px 10px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    font-size: 14px;
-  }
-
-  /* =====================================================
-   TABLE
-===================================================== */
-  .table-wrap {
-    max-height: 70vh;
-    overflow-y: auto;
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 900px;
-  }
-
-  thead th {
-    position: sticky;
-    top: 0;
-    z-index: 50;
-    background: linear-gradient(90deg, #2345d6, #1e40af);
-    color: #fff;
-    padding: 10px;
-  }
-
-  th,
-  td {
-    border: 1px solid #e6e6e6;
-    padding: 5px;
-  }
-
-  tbody tr:hover {
-    background: #f7fbff;
-  }
-
-  .tr-chi td {
-  color: #b91c1c !important;
-  font-weight: normal !important; /* Thêm dòng này để bỏ tô đậm */
+.table-wrap {
+  max-height: 70vh;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
 }
 
-/* Nếu bạn muốn riêng cột Số tiền mảnh mai và căn lề phải cho chuyên nghiệp */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+  }
+
+
+
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: linear-gradient(90deg, #2345d6, #1e40af);
+  color: #fff;
+  
+  /* Căn giữa tuyệt đối theo chiều đứng và ngang */
+  display: table-cell; 
+  vertical-align: middle !important; 
+  text-align: center !important;
+
+  /* Triệt tiêu các khoảng trống thừa */
+  padding: 6px 2px !important; 
+  line-height: 1 !important;    /* Quan trọng: Để chữ không bị chiếm khoảng không trên dưới */
+  height: 25px !important;      /* Cố định chiều cao thấp cho thanh tiêu đề */
+  white-space: nowrap;          /* Không cho chữ tiêu đề xuống dòng gây cao thanh */
+  font-size: 12px !important;
+}
+
+/* =====================================================
+  6.1. PHÂN PHỐI CHIỀU RỘNG CỘT TRÊN DESKTOP (ĐÃ SỬA)
+===================================================== */
+
+/* Cột 1: Ngày */
+th:nth-child(1), td:nth-child(1) { 
+  width: 100px !important; 
+  min-width: 100px !important;
+  text-align: center !important; 
+}
+
+/* Cột 2: Loại (Tăng chiều rộng và sửa lỗi !important) */
+th:nth-child(2), td:nth-child(2) { 
+  width: 70px !important; 
+  min-width: 70px !important;
+  text-align: center !important; 
+}
+
+/* 1. Sửa lại quy tắc cột 3 hiện tại: Chỉ áp dụng cho td (ô nội dung) */
+td:nth-child(3) { 
+  width: auto !important; 
+  min-width: 160px !important; 
+  text-align: left !important; /* Nội dung vẫn căn trái cho dễ đọc */
+}
+
+/* 2. Ép riêng tiêu đề của cột 3 phải canh giữa */
+th:nth-child(3) { 
+  width: auto !important; 
+  min-width: 160px !important; 
+  text-align: center !important; /* Tiêu đề sẽ nhảy vào giữa */
+}
+/* --- CỘT 4: SỐ TIỀN --- */
+th:nth-child(4) { 
+    width: 100px !important; 
+    min-width: 100px !important;
+    text-align: center !important; /* Tiêu đề canh giữa */
+}
+td:nth-child(4) { 
+    width: 100px !important; 
+    min-width: 100px !important;
+    text-align: right !important;   /* Số tiền canh trái theo yêu cầu */
+    padding-left: 8px !important;  /* Đệm nhẹ lề trái để không dính vách */
+}
+
+
+/* Cột 5: Thao tác (Sửa/Xóa) */
+table th:nth-child(5), table td:nth-child(5) { 
+  width: 90px !important; 
+  min-width: 90px !important;
+  max-width: 90px !important;
+  padding: 5px 0px !important; 
+  text-align: center !important; 
+}
+/* =====================================================
+  6.2. CUSTOM ROW STYLES (Dòng Chi & Cột Số tiền)
+===================================================== */
+
+/* Quy tắc đã thảo luận: Dòng Chi màu đỏ, font mảnh */
+.tr-chi td {
+  color: #b91c1c !important;
+  font-weight: normal !important;
+}
+
+/* Quy tắc đã thảo luận: Cột Số tiền font mảnh, căn phải */
 #tb td:nth-child(4) {
   font-weight: normal !important;
   text-align: right;
 }
-
-  =====================================================*/
-  /* =====================================================
-   ACTION ICONS (EDIT / DELETE) – FIX CLICK
+ 
+ /* =====================================================
+  7. ACTION ICONS (EDIT / DELETE) - ĐÃ TỐI ƯU 
 ===================================================== */
 
-  /* Button icon mặc định */
-  table td button {
-    background: transparent;
+/* Button icon mặc định */
+table td button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  
+  /* Bắt buộc: Giảm padding xuống mức tối thiểu, loại bỏ margin */
+  padding: 4px 5px !important; /* Giảm padding ngang/dọc, thêm !important */
+  margin: 0 !important; /* Loại bỏ margin thừa */
+  
+  line-height: 1;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+  pointer-events: auto;
+}
+
+/* Hover & Disabled */
+table td button:hover { background: rgba(37, 99, 235, 0.12); }
+table td button:active { background: rgba(37, 99, 235, 0.2); }
+
+.icon-disabled {
+  opacity: 0.35;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+
+.icon-disabled:hover { background: transparent !important; }
+  
+  /* =====================================================
+    9. MODAL ACTIONS (NÚT LƯU & CLOSE ĐÃ CHỈNH SỬA)
+  ===================================================== */
+  /* Sử dụng d-flex và justify-content-end từ Bootstrap để căn phải */
+  .d-flex.gap-2.justify-content-end {
+    margin-top: 16px;
+  }
+
+  /* Quy tắc đã thảo luận: Màu Đỏ cho nút Đóng */
+  #btnClose {
+    background-color: #dc2626 !important; /* Đã thêm !important để ghi đè Bootstrap */
+    color: #fff !important;
+    /* Các style cơ bản nếu bạn không dùng btn-secondary */
+    padding: 10px 16px;
+    border-radius: 6px;
     border: none;
     cursor: pointer;
-    font-size: 18px;
-    padding: 6px 8px;
-    margin: 0 2px;
-    line-height: 1;
-    border-radius: 6px;
-    transition: background 0.15s ease;
-    pointer-events: auto;
-    /* 🔑 BẮT BUỘC */
-  }
-
-  /* Hover desktop */
-  table td button:hover {
-    background: rgba(37, 99, 235, 0.12);
-  }
-
-  /* Active (mobile) */
-  table td button:active {
-    background: rgba(37, 99, 235, 0.2);
-  }
-
-  /* ===============================
-   DISABLED ICON (KHI LOGOUT)
-=============================== */
-  .icon-disabled {
-    opacity: 0.35;
-    cursor: not-allowed !important;
-    pointer-events: none !important;
-    /* ❌ chỉ disable khi logout */
-  }
-
-  /* Không cho hover khi disabled */
-  .icon-disabled:hover {
-    background: transparent !important;
-  }
-
-  /* ===============================
-   MOBILE CLICK FIX
-=============================== */
-  @media (max-width: 768px) {
-    table td button {
-      min-width: 36px;
-      min-height: 36px;
-      /* 👆 tăng vùng bấm cho mobile */
-    }
-  }
-
-  /* =====================================================
-   MODAL (LOGIN + FORM)
-===================================================== */
-  .modal {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 100000;
-  }
-
-  .modal.active {
-    display: flex;
-  }
-
-  .box,
-  .modal-box {
-    width: 90%;
-    max-width: 360px;
-    background: #fff;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-  }
-
-  .box h3,
-  .modal-box h3 {
-    margin-top: 0;
-    text-align: center;
-  }
-
-  .modal-box label {
-    font-size: 13px;
-    margin-top: 10px;
-    display: block;
-  }
-
-  .modal-box input,
-  .modal-box select {
-    width: 100%;
-    padding: 10px 12px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    margin-top: 4px;
-  }
-
-  .modal-box button,
-  .box button {
-    width: 100%;
-    padding: 10px;
-    margin-top: 12px;
-    border-radius: 6px;
-    border: none;
-    background: #2563eb;
-    color: #fff;
     font-weight: bold;
+    transition: background 0.15s ease;
+  }
+  
+  /* Quy tắc đã thảo luận: Màu Xanh cho nút Lưu */
+  #btnSave {
+    background-color: #2563eb !important; /* Đã thêm !important để ghi đè btn-primary */
+    color: #fff !important;
   }
 
   /* =====================================================
-   TOAST
-===================================================== */
-  
-/* =====================================================
-   TOAST (CĂN GIỮA NỘI DUNG)
-===================================================== */
-.toast {
+    10. TOAST (THÔNG BÁO) - ĐÃ THU GỌN
+  ===================================================== */
+  .toast {
   position: fixed;
-  top: 20px;           /* Khoảng cách từ mép trên */
-  left: 50%;           /* Đưa về giữa theo chiều ngang */
-  transform: translateX(-50%) translateY(-10px); /* Căn chính xác tâm và hiệu ứng trượt */
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-10px);
   
-  min-width: 250px;    /* Độ rộng tối thiểu */
-  max-width: 90vw;     /* Không tràn màn hình điện thoại */
+  /* CHIẾN THUẬT THU GỌN: */
+  width: auto !important;       /* Không cố định chiều rộng */
+  min-width: fit-content !important; /* Chỉ rộng bằng đúng nội dung chữ */
+  max-width: 80vw;
+  white-space: nowrap;          /* Ép chữ trên 1 dòng để thanh luôn ngắn */
   
-  padding: 12px 20px;
-  border-radius: 50px; /* Bo tròn kiểu viên thuốc cho đẹp */
+  padding: 6px 16px;            /* Khoảng cách đệm vừa phải */
+  min-height: unset !important; /* Loại bỏ giới hạn chiều cao cũ */
+  border-radius: 50px;
+  
   background: rgba(0, 0, 0, 0.85);
   color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
   
-  /* CĂN GIỮA CHỮ */
-  text-align: center;  
-  display: flex;
+  /* CĂN GIỮA NỘI DUNG */
+  display: inline-flex;         /* Dùng inline-flex thay vì flex để ôm sát */
   align-items: center;
   justify-content: center;
   
-  font-size: 15px;
-  font-weight: 500;
   z-index: 100001;
   opacity: 0;
   transition: all 0.3s ease;
   pointer-events: none;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }
 
 .toast.show {
   opacity: 1;
-  transform: translateX(-50%) translateY(0); /* Trượt xuống vị trí chuẩn */
+  transform: translateX(-50%) translateY(0);
 }
 
-  /* =====================================================
-   MOBILE FIX
+ /* =====================================================
+  11. MEDIA QUERIES & ANIMATION (FIX CƯỠNG CHẾ MOBILE) điều chỉnh cột trên điện thoại OK
 ===================================================== */
-  @media (max-width: 768px) {
-    table {
-      min-width: 600px;
-    }
+@media (max-width: 768px) {
+  table {
+    width: 100% !important; 
+    table-layout: fixed !important;
+  }
+}
+
+@media (max-width: 480px) {
+  
+  /* 1. ĐỊNH NGHĨA LẠI CHIỀU RỘNG CỘT CHO ĐIỆN THOẠI */
+  
+  /* CỘT CỐ ĐỊNH */
+  th:nth-child(1), td:nth-child(1) { /* Cột 1: Ngày */
+    width: 30px !important; 
+    min-width: 30px !important;
+  }
+  th:nth-child(2), td:nth-child(2) { /* Cột 2: Loại */
+    width: 16px !important; 
+    min-width: 20px !important;
+  }
+  th:nth-child(4), td:nth-child(4) { /* Cột 4: Số tiền */
+    width: 30px !important; 
+    min-width: 30px !important;
+  }
+  /* CỘT THAO TÁC (5) - CỐ ĐỊNH 90PX */
+  table th:nth-child(5), table td:nth-child(5) { 
+    width: 80px !important; 
+    min-width: 80px !important;
+    max-width: 80px !important; 
+  }
+  
+  /* CỘT NỘI DUNG (3) - FIX CHẶT MAX-WIDTH VÀ BUỘC XUỐNG DÒNG */
+  th:nth-child(3), td:nth-child(3) { 
+    width: 50px !important; /* <--- Cố định tạm thời width */
+    min-width: 60px !important; 
+    max-width: 60px !important; /* <--- Bắt buộc phải là 60px */
+    
+    /* CƯỠNG CHẾ: Buộc nội dung xuống dòng */
+    word-break: break-all !important; /* Mạnh hơn break-word */
+    overflow: hidden !important; /* Ẩn đi phần bị tràn nếu có lỗi */
+  }
+  
+  /* 2. TỐI ƯU HÓA CHUNG */
+  th, td {
+    padding: 3px !important; 
+    font-size: 13px !important; 
+  }
+  
+  /* Cột Số tiền phải căn phải và chữ nhỏ hơn để hiển thị đủ */
+  #tb td:nth-child(4) {
+    font-size: 13px !important;
+  }
+  
+  /* Icon buttons (Giữ nguyên) */
+  table td button {
+    padding: 2px 4px !important; 
+    font-size: 16px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
   }
 
-  /* ===============================
-   FIX MODAL FORM INPUT DATE
-   =============================== */
-
-  /* Form modal sắp xếp gọn */
+  /* ... Giữ nguyên các quy tắc modal đã có ... */
   .modal-form-grid {
-    display: grid;
     grid-template-columns: 1fr;
-    gap: 12px;
   }
-
-  /* Label rõ ràng */
-  .modal-form-grid label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #374151;
+  .modal-form-grid label,
+  .modal-form-grid input,
+  .modal-form-grid select {
+    grid-column: span 1;
   }
+}
 
-  /* Input & select full width */
-  .modal-box input,
-  .modal-box select {
-    width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
+@keyframes modalPop {
+  from {
+    transform: scale(.95);
+    opacity: 0;
   }
-
-  /* Riêng input date – tránh bị cắt */
-  .modal-box input[type="date"] {
-    width: 100%;
-    min-width: 100%;
-    font-size: 16px;
-    height: 42px;
+  to {
+    transform: scale(1);
+    opacity: 1;
   }
-
-  /* Input đẹp + đồng đều */
-  .modal-box input,
-  .modal-box select {
-    height: 42px;
-    padding: 10px 12px;
-    border-rad
-
-    /* ===== MODAL BASE ===== */
-    .modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, .45);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 999;
-    }
-
-    .modal.active {
-      display: flex;
-    }
-
-    /* ===== MODAL BOX ===== */
-    .modal-box,
-    .box {
-      background: #fff;
-      border-radius: 10px;
-      width: 420px;
-      max-width: 95%;
-      padding: 16px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, .2);
-      animation: modalPop .2s ease-out;
-    }
-
-    /* ===== HEADER ===== */
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-
-    .modal-header h3 {
-      margin: 0;
-      font-size: 18px;
-    }
-
-    .modal-close {
-      cursor: pointer;
-      font-size: 22px;
-      line-height: 1;
-      color: #888;
-    }
-
-    .modal-close:hover {
-      color: #000;
-    }
-
-    /* ===== FORM GRID ===== */
-    .modal-form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px 12px;
-    }
-
-    /* label full row */
-    .modal-form-grid label {
-      grid-column: span 2;
-      font-size: 13px;
-      color: #555;
-    }
-
-    /* inputs */
-    .modal-form-grid input,
-    .modal-form-grid select {
-      grid-column: span 2;
-      padding: 8px 10px;
-      font-size: 14px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      width: 100%;
-      box-sizing: border-box;
-    }
-
-    /* ===== FIX DATE INPUT ===== */
-    .modal-form-grid input[type="date"] {
-      min-width: 100%;
-    }
-
-    /* ===== ACTIONS ===== */
-    .modal-actions {
-      margin-top: 14px;
-      text-align: right;
-    }
-
-    .modal-actions button {
-      padding: 8px 16px;
-      border-radius: 6px;
-      border: none;
-      background: #1976d2;
-      color: #fff;
-      cursor: pointer;
-    }
-
-    .modal-actions button:hover {
-      opacity: .9;
-    }
-
-    /* ===== MOBILE ===== */
-    @media (max-width: 480px) {
-      .modal-form-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .modal-form-grid label,
-      .modal-form-grid input,
-      .modal-form-grid select {
-        grid-column: span 1;
-      }
-    }
-
-    /* ===== ANIMATION ===== */
-    @keyframes modalPop {
-      from {
-        transform: scale(.95);
-        opacity: 0;
-      }
-
-      to {
-        transform: scale(1);
-        opacity: 1;
-      }
-    }
-
-
-
-    .close-btn {
-      position: absolute;
-      top: 10px;
-      right: 12px;
-      border: none;
-      background: none;
-      font-size: 18px;
-      cursor: pointer;
-      color: #666;
-    }
-
-    .close-btn:hover {
-      color: #000;
-    }
-/* Mỗi input 1 dòng */
-.box .form-row {
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 12px;
 }
-
-.box .form-row label {
-    font-size: 14px;
-    margin-bottom: 4px;
-    color: #111;
-}
-
-.box .form-row input {
-    padding: 10px 12px;
-    font-size: 15px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    outline: none;
-    width: 100%;
-}
-
-.box .form-row input:focus {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 2px rgba(37,99,235,0.12);
-}
-
-/* Nút hành động */
-.box .form-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-}
-
-.box .form-actions button {
-    padding: 10px 16px;
-    border-radius: 6px;
-    border: none;
-    background: #2563eb;
-    color: #fff;
-    cursor: pointer;
-    font-weight: bold;
-}
-
-.box .form-actions button:hover {
-    opacity: 0.95;
-}
-
-.box .form-actions button:last-child {
-    background: #9ca3af; /* nút đóng màu xám */
-
-    }
-
-    tbody tr:hover { background: #f7fbff; }
-
-    /* Màu gốc của nút Đăng nhập (Xanh) */
-#btnLogin {
-  background-color: #2563eb; 
-  color: white;
-  transition: 0.3s;
-}
-
-/* Khi đã đăng nhập (Nền đỏ, chữ trắng) */
-#btnLogin.logged {
-  background-color: #dc2626 !important;
-  color: #ffffff !important;
-  border-color: #dc2626 !important;
-}
-
 </style>

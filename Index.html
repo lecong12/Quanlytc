@@ -8,6 +8,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   
   <?!= include('Css'); ?>
   
@@ -36,7 +37,7 @@
     .stat-card small { font-size: 11px; display: block; text-transform: uppercase; opacity: 0.9; }
     .stat-card b { font-size: 16px; }
 
-    /* BẢNG DỮ LIỆU CUỘN - ĐÃ FIX HÀNG MỎNG & CỘT GỌN */
+    /* BẢNG DỮ LIỆU CUỘN - HÀNG MỎNG & CỘT GỌN */
 .table-wrap { 
   flex-grow: 1; 
   overflow-y: auto; 
@@ -49,7 +50,7 @@
 
 table { 
   width: 100%; 
-  font-size: 15px;      /* Chữ to theo yêu cầu trước đó */
+  font-size: 15px;      /* Chữ to theo yêu cầu */
   border-collapse: collapse; 
   min-width: 700px;
   table-layout: fixed; /* 🔑 Ép cố định chiều rộng cột */
@@ -57,8 +58,8 @@ table {
 
 /* Cấu hình độ rộng các cột (Tổng 100%) */
 table th:nth-child(1) { width: 30px; } /* Ngày */
-table th:nth-child(2) { width: 15px;  } /* Loại */
-table th:nth-child(3) { width: 50px;  } /* auto là Nội dung (tự giãn) */
+table th:nth-child(2) { width: 6px;  } /* Loại */
+table th:nth-child(3) { width: 55px;  } /* auto. Nội dung (tự giãn) */
 table th:nth-child(4) { width: 30px; } /* Số tiền */
 table th:nth-child(5) { width: 90px;  } /* Thao tác */
 
@@ -108,13 +109,13 @@ thead th {
     }
   </style>
 </head>
-<body>
 
+<body>
 <div class="app-container">
 
   <div class="sticky-top-section">
     <header class="d-flex justify-content-between align-items-center mb-2">
-      <h5 class="fw-bold m-0 text-primary"><i class="bi bi-bank"></i> QUẢN LÝ THU CHI</h5>
+      <h5 class="fw-bold m-0 text-primary"><i class="bi bi-bank"></i> TỔNG HỢP THU CHI GIA ĐÌNH</h5>
       <button id="btnLogin" class="btn btn-primary btn-sm px-3 fw-bold" onclick="toggleLogin()">ĐĂNG NHẬP</button>
     </header>
 
@@ -178,13 +179,13 @@ thead th {
 
     <div class="row g-1 mb-2">
       <div class="col-4">
-        <input id="searchBox" class="form-control form-control-sm" placeholder="Tìm nhanh..." oninput="searchTable()">
+        <input id="searchBox" class="form-control form-control-sm" placeholder="Tìm kiếm..." oninput="searchTable()">
       </div>
       <div class="col-2">
         <button class="btn btn-info btn-sm w-100 text-white fw-bold" onclick="applyFilter()">LỌC</button>
       </div>
       <div class="col-3">
-        <button class="btn btn-outline-secondary btn-sm w-100 fw-bold" onclick="clearFilter()">XÓA LỌC</button>
+        <button class="btn btn-outline-secondary btn-sm w-100 fw-bold" onclick="clearFilter()">RESET</button>
       </div>
       <div class="col-3">
         <button id="btnAdd" class="btn btn-success btn-sm w-100 fw-bold disabled" onclick="openModal()" disabled>+ THÊM</button>
@@ -192,15 +193,27 @@ thead th {
     </div>
 
     <div class="row g-1">
-      <div class="col-3"><button class="btn btn-outline-success btn-sm-custom w-100" onclick="exportExcel()">Excel</button></div>
-      <div class="col-3"><button class="btn btn-outline-danger btn-sm-custom w-100" onclick="exportPDF()">PDF</button></div>
-    <div class="col-6">
-  <a id="sheetLink" href="https://docs.google.com/spreadsheets/d/1GSfropAOsuXe0IBwDCse32WeXTO63YPB_gqBmHr0mBY/edit?gid=998902108#gid=998902108" target="_blank" 
-     class="btn btn-outline-success btn-sm-custom w-100 disabled">
-     <i class="bi bi-google"></i> Google Sheets
-  </a>
+  <div class="col-3">
+    <button id="btnExportExcel" class="btn btn-outline-success btn-sm-custom w-100 disabled" onclick="exportExcel()" disabled>Excel</button>
   </div>
 
+  <div class="col-3">
+    <button id="btnExportPDF" class="btn btn-outline-danger btn-sm-custom w-100 disabled" onclick="exportPDF()" disabled>PDF</button>
+  </div>
+
+  <div class="col-3">
+    <a id="sheetLink" href="https://docs.google.com/spreadsheets/d/1231Sedy83u9gaYdWDD8fPHPpJZLPeErl--Fpw-RyG9E/edit#gid=998902108" 
+       target="_blank" class="btn btn-outline-success btn-sm-custom w-100 disabled">
+      <i class="bi bi-google"></i> Sheets
+    </a>
+  </div>
+
+  <div class="col-3">
+    <button id="btnOpenEmail" class="btn btn-outline-primary btn-sm-custom w-100 disabled" onclick="openEmailModal()" disabled>
+      <i class="bi bi-envelope"></i> Email
+    </button>
+  </div>
+</div>
 
   <div class="table-wrap">
     <table class="table table-hover align-middle" id="mainTable">
@@ -227,11 +240,14 @@ thead th {
       <select id="m_type" class="form-select"><option value="Thu">Thu</option><option value="Chi">Chi</option></select>
     </div>
     <div class="mb-2"><label class="small fw-bold">Nội dung</label><input id="m_content" class="form-control" placeholder="Lý do thu/chi..."></div>
-    <div class="mb-4"><label class="small fw-bold">Số tiền</label><input id="m_amount" type="number" class="form-control" placeholder="0"></div>
-    <div class="d-flex gap-2">
-      <button class="btn btn-primary btn-lg flex-grow-1 fw-bold shadow-sm" onclick="modalSave()">LƯU</button>
-      <button class="btn btn-secondary btn-lg fw-bold px-4" onclick="closeModal()">ĐÓNG</button>
+    <!-- <div class="mb-4"><label class="small fw-bold">Số tiền</label><input id="m_amount" type="number" class="form-control" placeholder="0"></div> -->
+    <div class="mb-4"> <label class="small fw-bold">Số tiền</label> <input id="m_amount" type="text"  class="form-control"  placeholder="0"  oninput="formatAmount(this)">
+</div>
+    <div class="d-flex gap-2 justify-content-end"> 
+       <button id="btnSave" class="btn btn-primary btn-lg fw-bold shadow-sm" onclick="modalSave()">LƯU</button>
+       <button id="btnClose" class="btn btn-secondary btn-lg fw-bold" onclick="closeModal()">CLOSE</button>
     </div>
+
   </div>
 </div>
 
@@ -246,5 +262,73 @@ thead th {
 
 <div id="toast" class="toast-custom"></div>
 <?!= include('Javascript'); ?>
+
+<div id="modal-login" class="modal">
+    <div class="modal-box">
+        <h3>Đăng nhập</h3>
+        <input type="email" id="username" placeholder="Tên đăng nhập" required>
+        <input type="password" id="password" placeholder="Mật khẩu" required>
+        </div>
+</div>
+
+<script>
+    // Định nghĩa thông tin đăng nhập demo
+    const DEFAULT_USERNAME = "thuy";
+    const DEFAULT_PASSWORD = "1393"; 
+
+    function autofillLogin() {
+        const usernameInput = document.getElementById('u');
+        const passwordInput = document.getElementById('p');
+
+        if (usernameInput && passwordInput) {
+            usernameInput.value = DEFAULT_USERNAME;
+            passwordInput.value = DEFAULT_PASSWORD;
+            passwordInput.focus(); 
+            console.log('Đã tự động điền User và Pass.');
+        } else {
+            console.error('Không tìm thấy trường Username hoặc Password.');
+        }
+    }
+
+    // Lắng nghe sự kiện click nút Đăng nhập chính (ví dụ: nút trên header)
+    const btnLogin = document.getElementById('btnLogin'); 
+    if (btnLogin) {
+        // Tạm dừng 50ms để Modal kịp mở trước khi điền
+        btnLogin.addEventListener('click', function() {
+            setTimeout(autofillLogin, 50); 
+        });
+    }
+</script>
+
+<div id="commonModal" class="modal-overlay" style="display: none;">
+  <div class="modal-content-custom">
+    <div class="modal-header-custom">
+      <h5 id="modalTitle" style="margin:0; color: #1e40af; font-weight: bold;"> Gửi Báo cáo tổng hợp</h5>
+      <span style="cursor:pointer; font-size:20px;" onclick="closeCommonModal()">&times;</span>
+    </div>
+    <div id="modalBody" style="padding: 15px 0;">
+      </div>
+    <div id="modalFooter" style="text-align: right; border-top: 1px solid #eee; pt-2">
+      </div>
+  </div>
+</div>
+
+<style>
+/* Style để Modal hiện ra giữa màn hình */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5); z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-content-custom {
+  background: white; padding: 20px; border-radius: 8px; 
+  width: 90%; max-width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+.modal-header-custom {
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #eee; padding-bottom: 10px;
+}
+</style>
+
 </body>
 </html>
