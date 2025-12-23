@@ -1,1 +1,1 @@
-Ứng dụng quản lý thu chi cá nhân
+Ứng dụng quản lý thu chi cá nhân.
