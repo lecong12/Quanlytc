@@ -1,1 +1,1 @@
-Đây là ứng dụng quản lý thu chi cá nhân
+Ứng dụng quản lý thu chi cá nhân
