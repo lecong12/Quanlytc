@@ -50,7 +50,7 @@
 
 table { 
   width: 100%; 
-  font-size: 15px;      /* Chữ to theo yêu cầu */
+  font-size: 15px;      
   border-collapse: collapse; 
   min-width: 700px;
   table-layout: fixed; /* 🔑 Ép cố định chiều rộng cột */
@@ -74,7 +74,7 @@ thead th {
   text-transform: uppercase;
 }
 
-/* 🔑 QUAN TRỌNG: Giảm padding của các ô dữ liệu để hàng cực mỏng */
+/* 🔑 Giảm padding của các ô dữ liệu để hàng cực mỏng */
 #tb td {
   padding: 2px 8px !important; 
   line-height: 1.2;
@@ -115,7 +115,7 @@ thead th {
 
   <div class="sticky-top-section">
     <header class="d-flex justify-content-between align-items-center mb-2">
-      <h5 class="fw-bold m-0 text-primary"><i class="bi bi-bank"></i> TỔNG HỢP THU CHI GIA ĐÌNH</h5>
+      <h5 class="fw-bold m-0 text-primary"><i class="bi bi-bank"></i> TỔNG THỐNG THU CHI GIA ĐÌNH</h5>
       <button id="btnLogin" class="btn btn-primary btn-sm px-3 fw-bold" onclick="toggleLogin()">ĐĂNG NHẬP</button>
     </header>
 
@@ -129,7 +129,7 @@ thead th {
       <div class="row g-2">
         <div class="col-6">
           <select id="f_type" class="form-select form-select-sm">
-            <option value="">-- Tất cả loại --</option>
+            <option value="">Toàn bộ thu chi</option>
             <option value="Thu">Thu</option>
             <option value="Chi">Chi</option>
           </select>
@@ -182,7 +182,7 @@ thead th {
         <input id="searchBox" class="form-control form-control-sm" placeholder="Tìm kiếm..." oninput="searchTable()">
       </div>
       <div class="col-2">
-        <button class="btn btn-info btn-sm w-100 text-white fw-bold" onclick="applyFilter()">LỌC</button>
+        <button class="btn btn-info btn-sm w-100 text-white fw-bold" onclick="applyFilter()">LỌC DL</button>
       </div>
       <div class="col-3">
         <button class="btn btn-outline-secondary btn-sm w-100 fw-bold" onclick="clearFilter()">RESET</button>
@@ -252,11 +252,11 @@ thead th {
 </div>
 
 <div id="loginModal" class="modal-custom" onclick="closeLoginOutside(event)">
-  <div class="modal-box shadow" style="max-width: 320px;" onclick="event.stopPropagation()">
-    <h4 class="text-center fw-bold mb-3">XÁC THỰC</h4>
+  <div class="modal-box shadow login-modal-box" onclick="event.stopPropagation()">
+    <h4 class="text-center fw-bold mb-3 text-primary">XÁC THỰC</h4>
     <input id="u" class="form-control mb-2" placeholder="Tài khoản">
     <input id="p" type="password" class="form-control mb-4" placeholder="Mật khẩu">
-    <button class="btn btn-primary w-100 py-2 fw-bold" onclick="doLogin()">ĐĂNG NHẬP</button>
+    <button class="btn btn-primary w-100 py-2 fw-bold login-btn" onclick="doLogin()">ĐĂNG NHẬP</button>
   </div>
 </div>
 
@@ -308,7 +308,7 @@ thead th {
     </div>
     <div id="modalBody" style="padding: 15px 0;">
       </div>
-    <div id="modalFooter" style="text-align: right; border-top: 1px solid #eee; pt-2">
+    <div id="modalFooter" style="text-align: right; border-top: 1px solid #eee; padding-top: 2px;">
       </div>
   </div>
 </div>
@@ -316,17 +316,81 @@ thead th {
 <style>
 /* Style để Modal hiện ra giữa màn hình */
 .modal-overlay {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0,0,0,0.5); z-index: 9999;
-  display: flex; align-items: center; justify-content: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .modal-content-custom {
-  background: white; padding: 20px; border-radius: 8px; 
-  width: 90%; max-width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  background: white;
+  padding: 0;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 450px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  overflow: hidden;
 }
 .modal-header-custom {
-  display: flex; justify-content: space-between; align-items: center;
-  border-bottom: 1px solid #eee; padding-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px 25px;
+  border-bottom: 1px solid #eee;
+}
+.modal-header-custom h5 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+.modal-header-custom span {
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+  opacity: 0.8;
+  transition: opacity 0.3s;
+}
+.modal-header-custom span:hover {
+  opacity: 1;
+}
+#modalFooter button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-left: 10px;
+}
+#modalFooter button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.login-modal-box {
+  width: 92%;
+  max-width: 280px;
+  background: white;
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+.login-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+.login-btn:hover {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 </style>
 

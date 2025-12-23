@@ -74,7 +74,6 @@ function closeLoginOutside(e) {
 /* ============================================================
     3. TẢI DỮ LIỆU & HIỂN THỊ BẢNG (DATA LOADING & RENDERING)
     ============================================================ */
-// SỬA LỖI LOAD: Đảm bảo luồng chạy ổn định
 function loadAll() {
     // Hiển thị thông báo đang tải (tùy chọn)
     // showToast("Đang tải dữ liệu...", "#007bff"); 
@@ -102,8 +101,6 @@ function renderTable(rows) {
         const disClass = isLoggedIn ? '' : 'icon-disabled';
         const loginTitle = isLoggedIn ? '' : 'title="Yêu cầu đăng nhập"';
         const pointerStyle = isLoggedIn ? '' : 'style="pointer-events:none; opacity:0.35;"';
-
-        // LƯU Ý: Đảm bảo amount được làm sạch trước khi gọi fmt, mặc dù ở đây r.amount là từ sheet nên thường là số hoặc chuỗi số.
         const amountDisplay = fmt(r.amount); 
 
         tbody.insertAdjacentHTML('beforeend', `
@@ -575,12 +572,12 @@ function exportPDF() {
                 border-collapse: collapse; 
                 table-layout: fixed; /* BẮT BUỘC để chiều rộng cột hoạt động */
                 font-family: Arial, sans-serif; 
-                font-size: 11px;
+                font-size: 12px;
             }
             th, td { 
                 border: 0.5pt solid #ccc; 
                 padding: 4px; 
-                font-size: 11px;
+                font-size: 12px;
                 word-wrap: break-word; 
                 font-weight: normal !important; 
             }
@@ -614,8 +611,8 @@ function exportPDF() {
                 <tr>
                     <th style="width: 15%">Ngày</th>
                     <th style="width: 8%">Loại</th>
-                    <th style="width: 62%">Nội dung</th>
-                    <th style="width: 15%">Số tiền</th>
+                    <th style="width: 52%">Nội dung</th>
+                    <th style="width: 25%">Số tiền</th>
                 </tr>
             </thead>
             <tbody>
@@ -659,8 +656,10 @@ function exportPDF() {
 
     const opt = {
         // LỀ TRANG (mm): [trên, trái, dưới, phải]
-        margin: [20, 10, 20, 10], 
+        margin: [20, 20, 20, 10], 
         filename: `BCTC_${dateStr}_${timeStr}.pdf`, 
+        image: { type: 'png', quality: 1 },
+        html2canvas: { scale: 3, useCORS: true, letterRendering: true },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
