@@ -279,7 +279,6 @@ function modalSave() {
 
     if (btn) {
         btn.disabled = true;
-        btn.innerText = "Đang xử lý...";
         btn.style.opacity = "0.5";
     }
 
@@ -296,7 +295,6 @@ function modalSave() {
 
             if (btn) {
                 btn.disabled = false;
-                btn.innerText = originalText;
                 btn.style.opacity = "1";
             }
         })
@@ -304,7 +302,6 @@ function modalSave() {
             showToast("Lỗi: " + err.message, "#dc2626");
             if (btn) {
                 btn.disabled = false;
-                btn.innerText = "Thử lại";
                 btn.style.opacity = "1";
             }
         })[fn](o);
