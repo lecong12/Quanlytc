@@ -1,0 +1,28 @@
+<script>
+    // Định nghĩa thông tin đăng nhập demo
+    const DEFAULT_USERNAME = "thuy";
+    const DEFAULT_PASSWORD = "1393"; 
+
+    function autofillLogin() {
+        const usernameInput = document.getElementById('u');
+        const passwordInput = document.getElementById('p');
+
+        if (usernameInput && passwordInput) {
+            usernameInput.value = DEFAULT_USERNAME;
+            passwordInput.value = DEFAULT_PASSWORD;
+            passwordInput.focus(); 
+            console.log('Đã tự động điền User và Pass.');
+        } else {
+            console.error('Không tìm thấy trường Username hoặc Password.');
+        }
+    }
+
+    // Lắng nghe sự kiện click nút Đăng nhập chính (ví dụ: nút trên header)
+    const btnLogin = document.getElementById('btnLogin'); 
+    if (btnLogin) {
+        // Tạm dừng 50ms để Modal kịp mở trước khi điền
+        btnLogin.addEventListener('click', function() {
+            setTimeout(autofillLogin, 50); 
+        });
+    }
+</script>

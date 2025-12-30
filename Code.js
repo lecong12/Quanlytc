@@ -1,6 +1,5 @@
 /* =========================================================================
- * Code.gs - Hoàn chỉnh và Đồng bộ
- * Quản lý các hàm backend cho ứng dụng Thu Chi Gia đình (Web App)
+  * Code Quản lý các hàm backend cho ứng dụng Thu Chi Gia đình (Web App)
  * ========================================================================= */
 const SS = SpreadsheetApp.getActive();
 
@@ -76,7 +75,7 @@ function parseToDate(s){
 }
 
 /* -------------------------------------------------------------------------
- * PHẦN 2: CHỨC NĂNG ĐĂNG NHẬP (AUTHENTICATION)
+ * PHẦN 2: CHỨC NĂNG  (AUTHENTICATION)
  * ------------------------------------------------------------------------- */
 
 /**

@@ -11,118 +11,26 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   
   <?!= include('Css'); ?>
-  
-  <style>
-    /* LAYOUT CHÍNH */
-    body { background-color: #d1d8e0; font-family: 'Segoe UI', sans-serif; height: 100vh; margin: 0; overflow: hidden; }
-    
-    /* KHUNG APP: Mở rộng lên 1500px trên Desktop */
-    .app-container { 
-      display: flex; 
-      flex-direction: column; 
-      height: 100vh; 
-      padding: 10px; 
-      margin: 0 auto; 
-      max-width: 1000px; /* Đã tăng độ rộng */
-      background: #f8f9fa; 
-      box-shadow: 0 0 30px rgba(0,0,0,0.2);
-    }
-    
-    /* CỐ ĐỊNH PHẦN ĐẦU */
-    .sticky-top-section { flex-shrink: 0; background: inherit; z-index: 1020; padding-bottom: 10px; }
-
-    /* DASHBOARD */
-    .dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
-    .stat-card { padding: 12px 5px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .stat-card small { font-size: 11px; display: block; text-transform: uppercase; opacity: 0.9; }
-    .stat-card b { font-size: 16px; }
-
-    /* BẢNG DỮ LIỆU CUỘN - HÀNG MỎNG & CỘT GỌN */
-.table-wrap { 
-  flex-grow: 1; 
-  overflow-y: auto; 
-  overflow-x: auto; 
-  background: white; 
-  border-radius: 12px; 
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-  position: relative;
-}
-
-table { 
-  width: 100%; 
-  font-size: 15px;      
-  border-collapse: collapse; 
-  min-width: 700px;
-  table-layout: fixed; /* 🔑 Ép cố định chiều rộng cột */
-}
-
-/* Cấu hình độ rộng các cột (Tổng 100%) */
-table th:nth-child(1) { width: 30px; } /* Ngày */
-table th:nth-child(2) { width: 6px;  } /* Loại */
-table th:nth-child(3) { width: 55px;  } /* auto. Nội dung (tự giãn) */
-table th:nth-child(4) { width: 30px; } /* Số tiền */
-table th:nth-child(5) { width: 90px;  } /* Thao tác */
-
-thead th { 
-  position: sticky; 
-  top: 0; 
-  background-color: #2d3436 !important; 
-  color: white !important; 
-  z-index: 10; 
-  padding: 4px 8px;    /* 🔑 Giảm chiều cao tiêu đề */
-  font-size: 12px;
-  text-transform: uppercase;
-}
-
-/* 🔑 Giảm padding của các ô dữ liệu để hàng cực mỏng */
-#tb td {
-  padding: 2px 8px !important; 
-  line-height: 1.2;
-  border-bottom: 1px solid #eee;
-  vertical-align: middle;
-  white-space: nowrap;        /* Giữ nội dung 1 hàng */
-  overflow: hidden;           /* Nếu dài quá sẽ ẩn */
-  text-overflow: ellipsis;    /* Hiện dấu ... nếu dài */
-}
-
-/* Cho phép cột Nội dung được xuống dòng nếu cần, các cột khác giữ 1 dòng */
-#tb td:nth-child(3) {
-  white-space: normal; 
-}
-
-    /* MODAL */
-    .modal-custom {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
-      display: none; align-items: center; justify-content: center; z-index: 2050;
-    }
-    .modal-custom.active { display: flex; }
-    .modal-box { width: 92%; max-width: 450px; background: white; padding: 25px; border-radius: 20px; }
-
-    /* TIỆN ÍCH */
-    input, select { font-size: 16px !important; }
-    .btn-sm-custom { padding: 6px 2px; font-size: 12px; font-weight: bold; }
-    .disabled { opacity: 0.5; pointer-events: none; }
-
-    @media (min-width: 992px) {
-      body { padding: 15px 0; }
-      .app-container { border-radius: 20px; height: calc(100vh - 30px); }
-    }
-  </style>
 </head>
 
 <body>
+<!-- BẪY TRÌNH DUYỆT: Các ô ẩn này sẽ hứng tính năng tự động điền, bảo vệ ô tìm kiếm bên dưới -->
+<div style="position: absolute; top: -1000px; left: -1000px;">
+  <input type="text" name="fake_username_trap">
+  <input type="password" name="fake_password_trap">
+</div>
 <div class="app-container">
 
   <div class="sticky-top-section">
     <header class="d-flex justify-content-between align-items-center mb-2">
-      <h5 class="fw-bold m-0 text-primary"><i class="bi bi-bank"></i>TÀI CHÍNH GIA ĐÌNH</h5>
+      <h5 class="fw-bold m-0 text-primary"><i class="bi bi-bank"></i> TÀI CHÍNH GIA ĐÌNH</h5>
       <button id="btnLogin" class="btn btn-primary btn-sm px-3 fw-bold" onclick="toggleLogin()">ĐĂNG NHẬP</button>
     </header>
 
     <section class="dashboard-grid">
-      <div class="stat-card bg-success"><small>Tổng Thu</small><b id="sThu">0</b></div>
-      <div class="stat-card bg-danger"><small>Tổng Chi</small><b id="sChi">0</b></div>
-      <div class="stat-card" style="background-color: #6f42c1;"><small>Tồn Quỹ</small><b id="sTon">0</b></div>
+      <div class="stat-card bg-success"><small class="fw-bold">TỔNG THU</small><b id="sThu">0</b></div>
+      <div class="stat-card bg-danger"><small class="fw-bold">TỔNG CHI</small><b id="sChi">0</b></div>
+      <div class="stat-card" style="background-color: #6f42c1;"><small class="fw-bold">TỒN QUỸ</small><b id="sTon">0</b></div>
     </section>
 
     <div class="bg-light p-2 rounded border mb-2">
@@ -179,10 +87,10 @@ thead th {
 
     <div class="row g-1 mb-2">
       <div class="col-4">
-        <input id="searchBox" class="form-control form-control-sm" placeholder="Tìm kiếm..." oninput="searchTable()">
+        <input type="search" id="searchBox" name="search_query_custom" class="form-control form-control-sm" placeholder="Tìm kiếm..." oninput="searchTable()" autocomplete="nope" readonly onfocus="this.removeAttribute('readonly');">
       </div>
       <div class="col-2">
-        <button class="btn btn-info btn-sm w-100 text-white fw-bold" onclick="applyFilter()">LỌC DL</button>
+        <button class="btn btn-info btn-sm w-100 text-white fw-bold" onclick="applyFilter()">LỌC</button>
       </div>
       <div class="col-3">
         <button class="btn btn-outline-secondary btn-sm w-100 fw-bold" onclick="clearFilter()">RESET</button>
@@ -214,6 +122,7 @@ thead th {
     </button>
   </div>
 </div>
+</div>
 
   <div class="table-wrap">
     <table class="table table-hover align-middle" id="mainTable">
@@ -233,19 +142,19 @@ thead th {
 
 <div id="modalForm" class="modal-custom" onclick="closeModalOutside(event)">
   <div class="modal-box shadow" onclick="event.stopPropagation()">
-    <h4 id="modalTitle" class="fw-bold mb-3 text-center text-primary">CẬP NHẬT DỮ LIỆU</h4>
-    <div class="mb-2"><label class="small fw-bold">Ngày</label><input id="m_date" type="date" class="form-control"></div>
+    <h5 id="modalTitle" class="d-none">CẬP NHẬT DỮ LIỆU</h5>
+    <div class="mb-2"><label class="small fw-bold">Ngày</label><input id="m_date" type="date" class="form-control form-control-sm"></div>
     <div class="mb-2">
       <label class="small fw-bold">Loại</label>
-      <select id="m_type" class="form-select"><option value="Thu">Thu</option><option value="Chi">Chi</option></select>
+      <select id="m_type" class="form-select form-select-sm"><option value="Thu">Thu</option><option value="Chi">Chi</option></select>
     </div>
-    <div class="mb-2"><label class="small fw-bold">Nội dung</label><input id="m_content" class="form-control" placeholder="Lý do thu/chi..."></div>
+    <div class="mb-2"><label class="small fw-bold">Nội dung</label><input id="m_content" class="form-control form-control-sm" placeholder="Lý do thu/chi..."></div>
     <!-- <div class="mb-4"><label class="small fw-bold">Số tiền</label><input id="m_amount" type="number" class="form-control" placeholder="0"></div> -->
-    <div class="mb-4"> <label class="small fw-bold">Số tiền</label> <input id="m_amount" type="text"  class="form-control"  placeholder="0"  oninput="formatAmount(this)">
+    <div class="mb-2"> <label class="small fw-bold">Số tiền</label> <input id="m_amount" type="text"  class="form-control form-control-sm"  placeholder="0"  oninput="formatAmount(this)">
 </div>
     <div class="d-flex gap-2 justify-content-end"> 
-       <button id="btnSave" class="btn btn-primary btn-lg fw-bold shadow-sm" onclick="modalSave()">LƯU</button>
-       <button id="btnClose" class="btn btn-secondary btn-lg fw-bold" onclick="closeModal()">CLOSE</button>
+       <button id="btnClose" class="btn btn-secondary btn-sm px-3 fw-bold" onclick="closeModal()">Đóng</button>
+       <button id="btnSave" class="btn btn-primary btn-sm px-3 fw-bold shadow-sm" onclick="modalSave()">LƯU</button>
     </div>
 
   </div>
@@ -253,146 +162,50 @@ thead th {
 
 <div id="loginModal" class="modal-custom" onclick="closeLoginOutside(event)">
   <div class="modal-box shadow login-modal-box" onclick="event.stopPropagation()">
-    <h4 class="text-center fw-bold mb-3 text-primary">XÁC THỰC</h4>
-    <input id="u" class="form-control mb-2" placeholder="Tài khoản">
-    <input id="p" type="password" class="form-control mb-4" placeholder="Mật khẩu">
-    <button class="btn btn-primary w-100 py-2 fw-bold login-btn" onclick="doLogin()">ĐĂNG NHẬP</button>
+    <form onsubmit="event.preventDefault(); doLogin();" autocomplete="on">
+      <div class="text-center mb-2 text-primary">
+        <i class="bi bi-shield-lock-fill" style="font-size: 3rem;"></i>
+      </div>
+      <input id="u" name="login_user" class="form-control mb-2" placeholder="Tài khoản" autocomplete="username">
+      <input id="p" name="login_pass" type="password" class="form-control mb-4" placeholder="Mật khẩu" autocomplete="current-password">
+      <button type="submit" class="btn btn-primary w-100 py-2 fw-bold login-btn">ĐĂNG NHẬP</button>
+    </form>
+  </div>
+</div>
+
+<div id="deleteModal" class="modal-custom" onclick="closeDeleteModalOutside(event)">
+  <div class="modal-box shadow" onclick="event.stopPropagation()" style="max-width: 280px; padding: 20px;">
+    <div class="text-center text-danger mb-1">
+      <i class="bi bi-trash3-fill" style="font-size: 2.5rem;"></i>
+    </div>
+    <h6 class="fw-bold mb-2 text-center text-danger">XÁC NHẬN XÓA</h6>
+    <p class="text-center mb-3 text-secondary small">Bạn có chắc chắn xóa dòng này?</p>
+    <div class="d-flex gap-2 justify-content-center">
+       <button class="btn btn-secondary btn-sm fw-bold px-3" onclick="closeDeleteModal()">Hủy</button>
+       <button id="btnConfirmDelete" class="btn btn-danger btn-sm fw-bold px-3" onclick="confirmDelete()">Xóa</button>
+    </div>
   </div>
 </div>
 
 <div id="toast" class="toast-custom"></div>
 <?!= include('Javascript'); ?>
 
-<div id="modal-login" class="modal">
-    <div class="modal-box">
-        <h3>Đăng nhập</h3>
-        <input type="email" id="username" placeholder="Tên đăng nhập" required>
-        <input type="password" id="password" placeholder="Mật khẩu" required>
-        </div>
-</div>
+<?!= include('Js_Login'); ?>
 
-<script>
-    // Định nghĩa thông tin đăng nhập demo
-    const DEFAULT_USERNAME = "thuy";
-    const DEFAULT_PASSWORD = "1393"; 
-
-    function autofillLogin() {
-        const usernameInput = document.getElementById('u');
-        const passwordInput = document.getElementById('p');
-
-        if (usernameInput && passwordInput) {
-            usernameInput.value = DEFAULT_USERNAME;
-            passwordInput.value = DEFAULT_PASSWORD;
-            passwordInput.focus(); 
-            console.log('Đã tự động điền User và Pass.');
-        } else {
-            console.error('Không tìm thấy trường Username hoặc Password.');
-        }
-    }
-
-    // Lắng nghe sự kiện click nút Đăng nhập chính (ví dụ: nút trên header)
-    const btnLogin = document.getElementById('btnLogin'); 
-    if (btnLogin) {
-        // Tạm dừng 50ms để Modal kịp mở trước khi điền
-        btnLogin.addEventListener('click', function() {
-            setTimeout(autofillLogin, 50); 
-        });
-    }
-</script>
-
-<div id="commonModal" class="modal-overlay" style="display: none;">
-  <div class="modal-content-custom">
-    <div class="modal-header-custom">
-      <h5 id="modalTitle" style="margin:0; color: #1e40af; font-weight: bold;"> Gửi Báo cáo tổng hợp</h5>
-      <span style="cursor:pointer; font-size:20px;" onclick="closeCommonModal()">&times;</span>
+<div id="emailModal" class="modal-custom" onclick="closeEmailModalOutside(event)">
+  <div class="modal-box shadow" onclick="event.stopPropagation()">
+    <h4 class="fw-bold mb-3 text-center text-primary">GỬI BÁO CÁO QUA EMAIL</h4>
+    <div class="mb-3">
+      <label class="small fw-bold">Email người nhận</label>
+      <input type="email" id="txtEmailTarget" class="form-control" placeholder="nhap-email@gmail.com">
+      <p class="text-muted small mt-2 mb-0">* Hệ thống sẽ gửi toàn bộ bảng dữ liệu đang hiển thị.</p>
     </div>
-    <div id="modalBody" style="padding: 15px 0;">
-      </div>
-    <div id="modalFooter" style="text-align: right; border-top: 1px solid #eee; padding-top: 2px;">
-      </div>
+    <div class="d-flex gap-2 justify-content-end">
+       <button class="btn btn-secondary btn-sm fw-bold px-4" onclick="closeEmailModal()">Hủy</button>
+       <button id="btnConfirmEmail" class="btn btn-primary btn-sm fw-bold px-4" onclick="processSendEmail()">GỬI</button>
+    </div>
   </div>
 </div>
-
-<style>
-/* Style để Modal hiện ra giữa màn hình */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.5);
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.modal-content-custom {
-  background: white;
-  padding: 0;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 450px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-  overflow: hidden;
-}
-.modal-header-custom {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 20px 25px;
-  border-bottom: 1px solid #eee;
-}
-.modal-header-custom h5 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-}
-.modal-header-custom span {
-  cursor: pointer;
-  font-size: 24px;
-  line-height: 1;
-  opacity: 0.8;
-  transition: opacity 0.3s;
-}
-.modal-header-custom span:hover {
-  opacity: 1;
-}
-#modalFooter button {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
-  margin-left: 10px;
-}
-#modalFooter button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-}
-.login-modal-box {
-  width: 92%;
-  max-width: 280px;
-  background: white;
-  padding: 20px;
-  border-radius: 16px;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-}
-.login-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: none;
-  border-radius: 8px;
-  transition: all 0.3s;
-}
-.login-btn:hover {
-  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-</style>
 
 </body>
 </html>

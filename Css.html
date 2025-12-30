@@ -1,461 +1,227 @@
 <style>
   /* =====================================================
-    1. RESET & BASE
+    1. BASE & LAYOUT (CẤU TRÚC CHUNG)
   ===================================================== */
   * {
     box-sizing: border-box;
   }
 
   body {
-    margin: 0;
-    background: #f3f4f6;
-    font-family: Arial, sans-serif;
-    padding: 0;
-    touch-action: manipulation;
+    background-color: #d1d8e0; 
+    font-family: 'Segoe UI', sans-serif; 
+    height: 100vh; 
+    margin: 0; 
+    overflow: hidden; /* Ngăn cuộn body, chỉ cuộn nội dung bên trong */
   }
 
-  .app {
-    max-width: 1200px;
+  /* KHUNG APP: Container chính */
+  .app-container { 
+    display: flex; 
+    flex-direction: column; 
+    height: 100vh; 
+    padding: 10px; 
     margin: 0 auto;
-    width: 100%;
+    max-width: 1000px; 
+    background: #f8f9fa; 
+    box-shadow: 0 0 30px rgba(0,0,0,0.2);
+  }
+
+  @media (min-width: 992px) {
+    body { padding: 15px 0; }
+    .app-container { border-radius: 20px; height: calc(100vh - 30px); }
   }
 
   /* =====================================================
-    2. HEADER (CỐ ĐỊNH & LOGIN)
+    2. HEADER & DASHBOARD (PHẦN ĐẦU)
   ===================================================== */
-  header {
-    position: sticky;
-    top: 0;
-    z-index: 99999;
-    background: #f3f4f6;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 0;
-  }
+  /* Cố định phần đầu (Header + Dashboard + Filter) */
+  .sticky-top-section { flex-shrink: 0; background: inherit; z-index: 1020; padding-bottom: 10px; }
 
-  header h2 {
-    margin: 0;
-    font-size: 20px;
-    color: #111;
-  }
+  /* Dashboard Grid (3 ô thống kê) */
+  .dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
+  
+  .stat-card { padding: 12px 5px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+  .stat-card small { font-size: 11px; display: block; text-transform: uppercase; opacity: 0.9; }
+  .stat-card b { font-size: 16px; }
 
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  /* Nút Đăng nhập/Đăng xuất */
+  /* Nút Đăng nhập/Đăng xuất trên Header */
   #btnLogin {
-    padding: 4px 10px;
-    border: none;
-    border-radius: 4px;
-    font-weight: bold;
-    cursor: pointer;
-    background-color: #2563eb; /* Màu gốc: Xanh */
-    color: #fff;
-    z-index: 100000;
     transition: 0.3s;
   }
-
-  /* Khi đã đăng nhập (Cam) */
   #btnLogin.logged {
     background-color: #ff6600  !important;
     color: #ffffff !important;
+    border-color: #ff6600 !important;
   }
 
   /* =====================================================
-    3. DASHBOARD (3 CARD)
+    3. FILTER & INPUTS (BỘ LỌC)
   ===================================================== */
-  .dashboard {
-    position: sticky;
-    top: 32px; /* Dưới header */
-    z-index: 9999;
-    background: #f3f4f6;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    margin: 2px 0;
-  }
+  input, select { font-size: 16px !important; }
+  .btn-sm-custom { padding: 6px 2px; font-size: 12px; font-weight: bold; }
+  .disabled { opacity: 0.5; pointer-events: none; }
 
-  .card {
-    padding: 2px 10px;
-    border-radius: 4px;
-    color: #fff;
-    text-align: center;
-    font-size: 14px;
-  }
-
-  
-  .green { background: #16a34a; }
-  .red { background: #dc2626; }
-  .blue { background: #2563eb; }
-
- 
   /* =====================================================
-    4. FILTER & ACTIONS (CỐ ĐỊNH)
+    4. TABLE STYLES (BẢNG DỮ LIỆU)
   ===================================================== */
-  .actions {
-    position: sticky;
-    top: 100px; /* Dưới dashboard */
-    z-index: 9998;
-    background: #f3f4f6;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    padding-bottom: 4px;
+  /* Khung cuộn bảng */
+  .table-wrap { 
+    flex-grow: 1; 
+    overflow-y: auto; 
+    overflow-x: auto; 
+    background: white; 
+    border-radius: 12px; 
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    position: relative;
+    min-height: 0; /* Fix lỗi mất thanh cuộn trên flexbox */
   }
 
-  .filter-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 10px;
-    align-items: end;
+  table {
     width: 100%;
+    border-collapse: collapse;
+    min-width: 900px; /* Đảm bảo bảng không bị co quá nhỏ trên desktop */
+    table-layout: fixed; /* Cố định chiều rộng cột */
   }
 
-  .filter-row label {
-    font-size: 13px;
-    color: #333;
-    margin-bottom: 4px;
-    display: block;
-  }
-
-  .filter-row input,
-  .filter-row select {
-    padding: 8px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    width: 100%;
-  }
-
-  .filter-actions {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  /* =====================================================
-    5. NÚT THÊM MỚI (btn-add)
-  ===================================================== */
-  .btn-add {
-    background: #2563eb;
-    color: #fff;
-    padding: 8px 14px;
-    border-radius: 8px;
-    border: none;
-    font-weight: bold;
-    cursor: pointer;
+  /* Header Bảng (Sticky) */
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: linear-gradient(90deg, #2345d6, #1e40af);
+    color: #fff !important;
+    vertical-align: middle !important; 
+    text-align: center !important;
+    padding: 6px 2px !important; 
+    line-height: 1 !important;
+    height: 35px !important;
     white-space: nowrap;
-    transition: 0.2s;
+    font-size: 13px !important;
+    text-transform: uppercase;
   }
 
-  .btn-add:hover {
-    opacity: 0.95;
+  /* Dòng dữ liệu */
+  #tb td {
+    padding: 4px 8px !important; 
+    line-height: 1.3;
+    border-bottom: 1px solid #eee;
+    vertical-align: middle;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  /* Trạng thái Disabled (khi là User) */
-  .btn-add.disabled {
-    background: #9ca3af !important;
-    opacity: 0.55;
-    cursor: not-allowed;
-    pointer-events: none;
-    filter: grayscale(0.4);
+  /* --- CẤU HÌNH CHIỀU RỘNG CỘT (DESKTOP) --- */
+  /* Cột 1: Ngày */
+  th:nth-child(1), td:nth-child(1) { width: 100px !important; min-width: 100px !important; text-align: center !important; }
+  
+  /* Cột 2: Loại */
+  th:nth-child(2), td:nth-child(2) { width: 70px !important; min-width: 70px !important; text-align: center !important; }
+  
+  /* Cột 3: Nội dung (Tự giãn) */
+  th:nth-child(3) { width: auto !important; min-width: 160px !important; text-align: center !important; }
+  td:nth-child(3) { width: auto !important; min-width: 160px !important; text-align: left !important; white-space: normal !important; }
+  
+  /* Cột 4: Số tiền */
+  th:nth-child(4) { width: 120px !important; min-width: 120px !important; text-align: center !important; }
+  td:nth-child(4) { width: 120px !important; min-width: 120px !important; text-align: right !important; padding-right: 15px !important; }
+  
+  /* Cột 5: Thao tác */
+  th:nth-child(5), td:nth-child(5) { width: 90px !important; min-width: 90px !important; text-align: center !important; }
+
+  /* Style riêng cho dòng CHI (Màu đỏ) */
+  .tr-chi td { color: #b91c1c !important; }
+
+  /* Nút thao tác (Sửa/Xóa) trong bảng */
+  table td button {
+    background: transparent; border: none; cursor: pointer; font-size: 16px;
+    padding: 4px 5px !important; margin: 0 !important;
+    transition: background 0.15s ease; border-radius: 4px;
   }
-/* =====================================================
-  6. TABLE & CUSTOM ROW STYLES (ĐÃ TỐI ƯU CHIỀU RỘNG CỘT)
-===================================================== */
-.table-wrap {
-  max-height: 70vh;
-  overflow-y: auto;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-}
+  table td button:hover { background: rgba(37, 99, 235, 0.12); }
+  .icon-disabled { opacity: 0.35; cursor: not-allowed !important; pointer-events: none !important; }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 900px;
-  }
-
-
-
-thead th {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  background: linear-gradient(90deg, #2345d6, #1e40af);
-  color: #fff;
-  
-  /* Căn giữa tuyệt đối theo chiều đứng và ngang */
-  display: table-cell; 
-  vertical-align: middle !important; 
-  text-align: center !important;
-
-  /* Triệt tiêu các khoảng trống thừa */
-  padding: 6px 2px !important; 
-  line-height: 1 !important;    /* Quan trọng: Để chữ không bị chiếm khoảng không trên dưới */
-  height: 25px !important;      /* Cố định chiều cao thấp cho thanh tiêu đề */
-  white-space: nowrap;          /* Không cho chữ tiêu đề xuống dòng gây cao thanh */
-  font-size: 12px !important;
-}
-
-/* =====================================================
-  6.1. PHÂN PHỐI CHIỀU RỘNG CỘT TRÊN DESKTOP (ĐÃ SỬA)
-===================================================== */
-
-/* Cột 1: Ngày */
-th:nth-child(1), td:nth-child(1) { 
-  width: 100px !important; 
-  min-width: 100px !important;
-  text-align: center !important; 
-}
-
-/* Cột 2: Loại (Tăng chiều rộng và sửa lỗi !important) */
-th:nth-child(2), td:nth-child(2) { 
-  width: 70px !important; 
-  min-width: 70px !important;
-  text-align: center !important; 
-}
-
-/* 1. Sửa lại quy tắc cột 3 hiện tại: Chỉ áp dụng cho td (ô nội dung) */
-td:nth-child(3) { 
-  width: auto !important; 
-  min-width: 160px !important; 
-  text-align: left !important; /* Nội dung vẫn căn trái cho dễ đọc */
-}
-
-/* 2. Ép riêng tiêu đề của cột 3 phải canh giữa */
-th:nth-child(3) { 
-  width: auto !important; 
-  min-width: 160px !important; 
-  text-align: center !important; /* Tiêu đề sẽ nhảy vào giữa */
-}
-/* --- CỘT 4: SỐ TIỀN --- */
-th:nth-child(4) { 
-    width: 100px !important; 
-    min-width: 100px !important;
-    text-align: center !important; /* Tiêu đề canh giữa */
-}
-td:nth-child(4) { 
-    width: 100px !important; 
-    min-width: 100px !important;
-    text-align: right !important;   /* Số tiền canh trái theo yêu cầu */
-    padding-left: 8px !important;  /* Đệm nhẹ lề trái để không dính vách */
-}
-
-
-/* Cột 5: Thao tác (Sửa/Xóa) */
-table th:nth-child(5), table td:nth-child(5) { 
-  width: 90px !important; 
-  min-width: 90px !important;
-  max-width: 90px !important;
-  padding: 5px 0px !important; 
-  text-align: center !important; 
-}
-/* =====================================================
-  6.2. CUSTOM ROW STYLES (Dòng Chi & Cột Số tiền)
-===================================================== */
-
-/* Quy tắc đã thảo luận: Dòng Chi màu đỏ, font mảnh */
-.tr-chi td {
-  color: #b91c1c !important;
-  font-weight: normal !important;
-}
-
-/* Quy tắc đã thảo luận: Cột Số tiền font mảnh, căn phải */
-#tb td:nth-child(4) {
-  font-weight: normal !important;
-  text-align: right;
-}
- 
- /* =====================================================
-  7. ACTION ICONS (EDIT / DELETE) - ĐÃ TỐI ƯU 
-===================================================== */
-
-/* Button icon mặc định */
-table td button {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-  
-  /* Bắt buộc: Giảm padding xuống mức tối thiểu, loại bỏ margin */
-  padding: 4px 5px !important; /* Giảm padding ngang/dọc, thêm !important */
-  margin: 0 !important; /* Loại bỏ margin thừa */
-  
-  line-height: 1;
-  border-radius: 6px;
-  transition: background 0.15s ease;
-  pointer-events: auto;
-}
-
-/* Hover & Disabled */
-table td button:hover { background: rgba(37, 99, 235, 0.12); }
-table td button:active { background: rgba(37, 99, 235, 0.2); }
-
-.icon-disabled {
-  opacity: 0.35;
-  cursor: not-allowed !important;
-  pointer-events: none !important;
-}
-
-.icon-disabled:hover { background: transparent !important; }
-  
   /* =====================================================
-    9. MODAL ACTIONS (NÚT LƯU & CLOSE ĐÃ CHỈNH SỬA)
+    5. MODAL STYLES (CÁC CỬA SỔ BẬT LÊN)
   ===================================================== */
-  /* Sử dụng d-flex và justify-content-end từ Bootstrap để căn phải */
-  .d-flex.gap-2.justify-content-end {
-    margin-top: 16px;
-  }
-
-  /* Quy tắc đã thảo luận: Màu Đỏ cho nút Đóng */
-  #btnClose {
-    background-color: #dc2626 !important; /* Đã thêm !important để ghi đè Bootstrap */
-    color: #fff !important;
-    /* Các style cơ bản nếu bạn không dùng btn-secondary */
-    padding: 10px 16px;
-    border-radius: 6px;
-    border: none;
-    cursor: pointer;
-    font-weight: bold;
-    transition: background 0.15s ease;
-  }
   
-  /* Quy tắc đã thảo luận: Màu Xanh cho nút Lưu */
-  #btnSave {
-    background-color: #2563eb !important; /* Đã thêm !important để ghi đè btn-primary */
-    color: #fff !important;
+  /* 5.1. Modal Chung (Nền đen mờ) */
+  .modal-custom, .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    display: none; align-items: center; justify-content: center; z-index: 2050;
+  }
+  .modal-custom.active { display: flex; }
+
+  /* 5.2. Modal Form (Thêm/Sửa) */
+  .modal-box { width: 92%; max-width: 450px; background: white; padding: 25px; border-radius: 20px; }
+  
+  /* Nút trong Modal Form */
+  #btnClose { background-color: #dc2626 !important; color: #fff !important; border: none; }
+  #btnSave { background-color: #2563eb !important; color: #fff !important; border: none; }
+
+  /* 5.3. Modal Login (Đăng nhập) */
+  .login-modal-box {
+    width: 92%; max-width: 280px; background: white; padding: 20px;
+    border-radius: 16px; box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  }
+  .login-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none; border-radius: 8px; color: white; transition: all 0.3s;
+  }
+  .login-btn:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+    transform: translateY(-2px);
   }
 
+  /* 5.4. Modal Email (Gửi báo cáo) */
+  .modal-content-custom {
+    background: white; padding: 0; border-radius: 12px;
+    width: 90%; max-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); overflow: hidden;
+  }
+  .modal-header-custom {
+    display: flex; justify-content: space-between; align-items: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white; padding: 20px 25px; border-bottom: 1px solid #eee;
+  }
+  .modal-header-custom h5 { margin: 0; font-size: 18px; font-weight: 600; }
+  
   /* =====================================================
-    10. TOAST (THÔNG BÁO) - ĐÃ THU GỌN
+    6. TOAST NOTIFICATION (THÔNG BÁO GÓC)
   ===================================================== */
   .toast {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%) translateY(-10px);
-  
-  /* CHIẾN THUẬT THU GỌN: */
-  width: auto !important;       /* Không cố định chiều rộng */
-  min-width: fit-content !important; /* Chỉ rộng bằng đúng nội dung chữ */
-  max-width: 80vw;
-  white-space: nowrap;          /* Ép chữ trên 1 dòng để thanh luôn ngắn */
-  
-  padding: 6px 16px;            /* Khoảng cách đệm vừa phải */
-  min-height: unset !important; /* Loại bỏ giới hạn chiều cao cũ */
-  border-radius: 50px;
-  
-  background: rgba(0, 0, 0, 0.85);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 500;
-  text-align: center;
-  
-  /* CĂN GIỮA NỘI DUNG */
-  display: inline-flex;         /* Dùng inline-flex thay vì flex để ôm sát */
-  align-items: center;
-  justify-content: center;
-  
-  z-index: 100001;
-  opacity: 0;
-  transition: all 0.3s ease;
-  pointer-events: none;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-}
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-10px);
+    width: auto !important; min-width: fit-content !important; max-width: 80vw;
+    padding: 8px 20px; border-radius: 50px;
+    background: rgba(0, 0, 0, 0.85); color: #fff;
+    font-size: 13px; font-weight: 500; text-align: center;
+    display: inline-flex; align-items: center; justify-content: center;
+    z-index: 100001; opacity: 0; transition: all 0.3s ease; pointer-events: none;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-.toast.show {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
+  /* =====================================================
+    7. MOBILE RESPONSIVE (ĐIỆN THOẠI)
+  ===================================================== */
+  @media (max-width: 768px) {
+    table { width: 100% !important; table-layout: fixed !important; }
+  }
 
- /* =====================================================
-  11. MEDIA QUERIES & ANIMATION (FIX CƯỠNG CHẾ MOBILE) điều chỉnh cột trên điện thoại OK
-===================================================== */
-@media (max-width: 768px) {
-  table {
-    width: 100% !important; 
-    table-layout: fixed !important;
-  }
-}
-
-@media (max-width: 480px) {
-  
-  /* 1. ĐỊNH NGHĨA LẠI CHIỀU RỘNG CỘT CHO ĐIỆN THOẠI */
-  
-  /* CỘT CỐ ĐỊNH */
-  th:nth-child(1), td:nth-child(1) { /* Cột 1: Ngày */
-    width: 30px !important; 
-    min-width: 30px !important;
-  }
-  th:nth-child(2), td:nth-child(2) { /* Cột 2: Loại */
-    width: 16px !important; 
-    min-width: 20px !important;
-  }
-  th:nth-child(4), td:nth-child(4) { /* Cột 4: Số tiền */
-    width: 30px !important; 
-    min-width: 30px !important;
-  }
-  /* CỘT THAO TÁC (5) - CỐ ĐỊNH 90PX */
-  table th:nth-child(5), table td:nth-child(5) { 
-    width: 80px !important; 
-    min-width: 80px !important;
-    max-width: 80px !important; 
-  }
-  
-  /* CỘT NỘI DUNG (3) - FIX CHẶT MAX-WIDTH VÀ BUỘC XUỐNG DÒNG */
-  th:nth-child(3), td:nth-child(3) { 
-    width: 50px !important; /* <--- Cố định tạm thời width */
-    min-width: 60px !important; 
-    max-width: 60px !important; /* <--- Bắt buộc phải là 60px */
+  @media (max-width: 480px) {
+    /* Tinh chỉnh cột cho màn hình nhỏ */
+    th:nth-child(1), td:nth-child(1) { width: 30px !important; min-width: 30px !important; } /* Ngày */
+    th:nth-child(2), td:nth-child(2) { width: 16px !important; min-width: 20px !important; } /* Loại */
+    th:nth-child(4), td:nth-child(4) { width: 30px !important; min-width: 30px !important; } /* Tiền */
+    th:nth-child(5), td:nth-child(5) { width: 80px !important; min-width: 80px !important; } /* Thao tác */
     
-    /* CƯỠNG CHẾ: Buộc nội dung xuống dòng */
-    word-break: break-all !important; /* Mạnh hơn break-word */
-    overflow: hidden !important; /* Ẩn đi phần bị tràn nếu có lỗi */
+    /* Cột Nội dung: Ép xuống dòng */
+    th:nth-child(3), td:nth-child(3) { 
+      width: 50px !important; min-width: 60px !important; max-width: 60px !important;
+      word-break: break-all !important; overflow: hidden !important;
+    }
+    
+    th, td { padding: 3px !important; font-size: 13px !important; }
+    #tb td:nth-child(4) { font-size: 13px !important; }
+    table td button { padding: 2px 4px !important; min-width: 36px !important; min-height: 36px !important; }
   }
-  
-  /* 2. TỐI ƯU HÓA CHUNG */
-  th, td {
-    padding: 3px !important; 
-    font-size: 13px !important; 
-  }
-  
-  /* Cột Số tiền phải căn phải và chữ nhỏ hơn để hiển thị đủ */
-  #tb td:nth-child(4) {
-    font-size: 13px !important;
-  }
-  
-  /* Icon buttons (Giữ nguyên) */
-  table td button {
-    padding: 2px 4px !important; 
-    font-size: 16px !important;
-    min-width: 36px !important;
-    min-height: 36px !important;
-  }
-
-  /* ... Giữ nguyên các quy tắc modal đã có ... */
-  .modal-form-grid {
-    grid-template-columns: 1fr;
-  }
-  .modal-form-grid label,
-  .modal-form-grid input,
-  .modal-form-grid select {
-    grid-column: span 1;
-  }
-}
-
-@keyframes modalPop {
-  from {
-    transform: scale(.95);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
 </style>

@@ -5,12 +5,22 @@
 let isLoggedIn = false;      // TRẠNG THÁI ĐĂNG NHẬP CHUNG
 let lastRows = [];           // Dữ liệu gốc
 let editId = null;           // Lưu ID dòng đang sửa
+let deleteId = null;         // Lưu ID dòng cần xóa
 let currentAction = 'add';   // Trạng thái: 'add' hay 'edit'
 let currentFilterDisplay = 'Toàn bộ các khoản thu chi'; // Biến lưu tiêu chí lọc
 
 const $ = i => document.getElementById(i);
 // ĐỊNH DẠNG: Sử dụng 'vi-VN' để có dấu chấm (.) phân cách hàng nghìn
 const fmt = n => new Intl.NumberFormat('vi-VN').format(n || 0);
+
+function formatAmount(input) {
+    let value = input.value.toString().replace(/\D/g, '');
+    if (value) {
+        input.value = new Intl.NumberFormat('vi-VN').format(value);
+    } else {
+        input.value = '';
+    }
+}
 
 /* ============================================================
     2. QUẢN LÝ ĐĂNG NHẬP (AUTHENTICATION)
@@ -54,7 +64,7 @@ function logout() {
     isLoggedIn = false;
     const btn = $('btnLogin');
     if (btn) {
-        btn.innerText = 'Đăng nhập';
+        btn.innerText = '🔒Đăng nhập';
         btn.classList.remove('logged');
     }
     
@@ -106,7 +116,7 @@ function renderTable(rows) {
         tbody.insertAdjacentHTML('beforeend', `
             <tr class="${rowClass}">
                 <td style="white-space: nowrap;">${r.date}</td>
-                <td style="font-weight: 500;">${r.type}</td>
+                <td>${r.type}</td>
                 <td>${r.content}</td>
                 <td style="text-align:right;">${amountDisplay}</td>
                 <td class="action-cell">
@@ -201,15 +211,23 @@ function openModal(){
 function openEditModal(id){
     if(!isLoggedIn) return showToast('Cần đăng nhập để sửa dữ liệu', 'orange'); 
     
-    google.script.run.withSuccessHandler(d=>{
-        if(!d) return alert('Không tìm thấy dữ liệu');
-        
+    // TỐI ƯU: Tìm dữ liệu ngay tại Client (lastRows) để mở form tức thì
+    const d = lastRows.find(r => r.id == id);
+
+    if (d) {
         currentAction = 'edit'; 
         editId = d.id;
         $('modalTitle').innerText = 'SỬA DỮ LIỆU';
         $('btnSave').innerText = 'CẬP NHẬT'; 
         
-        $('m_date').value = d.date;
+        // Xử lý ngày: Chuyển từ dd/MM/yyyy (hiển thị) sang yyyy-MM-dd (input date)
+        let dateVal = d.date;
+        if (dateVal && typeof dateVal === 'string' && dateVal.includes('/')) {
+            const p = dateVal.split('/');
+            if (p.length === 3) dateVal = `${p[2]}-${p[1]}-${p[0]}`;
+        }
+        $('m_date').value = dateVal;
+
         $('m_type').value = d.type;
         $('m_content').value = d.content;
         
@@ -218,7 +236,25 @@ function openEditModal(id){
         formatAmount(amountInput);    
         
         $('modalForm').classList.add('active');
-    }).getItemById(id);
+    } else {
+        // Fallback: Nếu không tìm thấy ở client (hiếm gặp) thì mới gọi server
+        showToast('Đang tải dữ liệu...', 'blue');
+        google.script.run.withSuccessHandler(serverData => {
+            if(!serverData) return alert('Không tìm thấy dữ liệu');
+            // Fill dữ liệu từ server
+            currentAction = 'edit';
+            editId = serverData.id;
+            $('modalTitle').innerText = 'SỬA DỮ LIỆU';
+            $('btnSave').innerText = 'CẬP NHẬT';
+            $('m_date').value = serverData.date;
+            $('m_type').value = serverData.type;
+            $('m_content').value = serverData.content;
+            const amt = $('m_amount');
+            amt.value = serverData.amount;
+            formatAmount(amt);
+            $('modalForm').classList.add('active');
+        }).getItemById(id);
+    }
 }
 
 function modalSave() {
@@ -255,7 +291,7 @@ function modalSave() {
     google.script.run
         .withSuccessHandler(() => {
             closeModal();
-            applyFilter();
+            applyFilter(true);
             showToast(msg, color); 
 
             if (btn) {
@@ -285,11 +321,39 @@ function closeModalOutside(e){
 function del(id){
     if(!isLoggedIn) return showToast('Cần đăng nhập để xóa', 'orange'); 
     
-    if(!confirm('Chắc chắn xóa dòng này?')) return;
+    deleteId = id;
+    $('deleteModal').classList.add('active');
+}
+
+function confirmDelete(){
+    if(!deleteId) return;
+    
+    const btn = $('btnConfirmDelete');
+    const originalText = btn.innerText;
+    btn.disabled = true;
+    btn.innerText = "Đang xóa...";
+    
     google.script.run.withSuccessHandler(() => {
         loadAll();
         showToast("Đã xóa dữ liệu", "#dc2626");
-    }).deleteRow(id);
+        closeDeleteModal();
+        btn.disabled = false;
+        btn.innerText = originalText;
+    }).withFailureHandler((err) => {
+        showToast("Lỗi: " + err.message, "red");
+        btn.disabled = false;
+        btn.innerText = originalText;
+        closeDeleteModal();
+    }).deleteRow(deleteId);
+}
+
+function closeDeleteModal(){
+    $('deleteModal').classList.remove('active');
+    deleteId = null;
+}
+
+function closeDeleteModalOutside(e){
+    if(e.target.id === 'deleteModal') closeDeleteModal();
 }
 
 /* ============================================================
@@ -375,7 +439,7 @@ function createFilterCriteria(filterData) {
     return filterData.mode === 'all' ? criteria : typeText + criteria;
 }
 
-function applyFilter() {
+function applyFilter(isSilent = false) {
     const filterData = {
         type: $('f_type').value,
         mode: $('f_mode').value,
@@ -390,9 +454,13 @@ function applyFilter() {
     currentFilterDisplay = createFilterCriteria(filterData);
     
     // Kiểm tra nếu sự kiện đến từ nút bấm thì mới đổi text nút
-    const btn = event && event.currentTarget ? event.currentTarget : null;
-    const originalText = btn ? btn.innerText : "";
-    if(btn) {
+    let btn = null;
+    let originalText = "";
+
+    // Chỉ xử lý UI nút bấm khi KHÔNG phải chế độ im lặng
+    if (!isSilent && typeof event !== 'undefined' && event && event.currentTarget) {
+        btn = event.currentTarget;
+        originalText = btn.innerText;
         btn.innerText = "Đang lọc...";
         btn.disabled = true;
     }
@@ -424,7 +492,7 @@ function applyFilter() {
                 btn.innerText = originalText;
                 btn.disabled = false;
             }
-            showToast("Đã lọc dữ liệu", "#007bff");
+            if (!isSilent) showToast("Đã lọc dữ liệu", "#007bff");
         })
         .withFailureHandler(function(err) {
             if(btn) {
@@ -686,77 +754,30 @@ window.addEventListener('DOMContentLoaded', () => {
     onModeChange(); 
     
     const btnLogin = $('btnLogin');
-    if (btnLogin && !btnLogin.onclick) {
-        btnLogin.onclick = toggleLogin;
+    if (btnLogin) {
+        if (!btnLogin.onclick) btnLogin.onclick = toggleLogin;
+        
+        // Cập nhật giao diện nút ngay khi tải trang để đồng bộ với trạng thái chưa đăng nhập
+        if (!isLoggedIn) {
+            btnLogin.innerText = '🔒Đăng nhập';
+            btnLogin.classList.remove('logged');
+        }
     }
 });
-
-/* ============================================================
-    9. PHÂN TÁCH DẤU CHẤM HÀNG NGHÌN (FORMATTING)
-    ============================================================ */
-function formatAmount(input) {
-  let value = input.value.replace(/\D/g, ''); 
-  
-  if (value) {
-    let formattedValue = new Intl.NumberFormat('vi-VN').format(value); 
-    input.value = formattedValue;
-  }
-}
-
-// Thêm vào bên trong window.addEventListener('DOMContentLoaded', ...):
-if ($('btnLogin')) {
-    $('btnLogin').addEventListener('click', () => setTimeout(autofillLogin, 100));
-}
-/* ============================================================
-    10. TỰ ĐIỀN THÔNG TIN ĐĂNG NHẬP
-   ============================================================ */
-const DEFAULT_USERNAME = "thuy"; 
-const DEFAULT_PASSWORD = "1393"; 
-
-function autofillLogin() {
-    const usernameInput = $('u'); 
-    const passwordInput = $('p'); 
-
-    if (usernameInput && passwordInput) {
-        usernameInput.value = DEFAULT_USERNAME;
-        passwordInput.value = DEFAULT_PASSWORD;
-        passwordInput.focus(); 
-        console.log('Đã tự động điền: thuy / 1393');
-    }
-}
 
 /* ============================================================
     11. HÀM XỬ LÝ GỬI EMAIL TRÊN GIAO DIỆN
    ============================================================ */
 function openEmailModal() {
-  const modal = $('commonModal');
-  if(!modal) return alert("Lỗi: Không tìm thấy khung Modal 'commonModal' trong HTML!");
+  const modal = $('emailModal');
+  if(!modal) return;
   
-  modal.style.display = 'flex';
-  $('modalTitle').innerText = "📧 GỬI BÁO CÁO QUA EMAIL";
-  
+  // Lấy email đã lưu lần trước
   const savedEmail = localStorage.getItem('lastUsedEmail') || "";
+  const input = $('txtEmailTarget');
+  if(input) input.value = savedEmail;
 
-  // Sử dụng innerHTML để dựng giao diện bên trong modal
-  const modalBody = $('modalBody');
-  const modalFooter = $('modalFooter');
-  
-  if(modalBody) {
-    modalBody.innerHTML = `
-      <div style="padding: 15px;">
-        <label style="font-weight: bold; display: block; margin-bottom: 5px;">Email người nhận:</label>
-        <input type="email" id="txtEmailTarget" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;" value="${savedEmail}" placeholder="nhap-email@gmail.com">
-        <p style="color: #666; font-size: 11px; margin-top: 8px;">* Hệ thống sẽ gửi toàn bộ bảng dữ liệu đang hiển thị.</p>
-      </div>
-    `;
-  }
-  
-  if(modalFooter) {
-    modalFooter.innerHTML = `
-      <button onclick="closeCommonModal()" style="padding: 5px 15px; cursor: pointer;">Hủy</button>
-      <button onclick="processSendEmail()" id="btnConfirmEmail" style="padding: 5px 15px; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">Gửi</button>
-    `;
-  }
+  modal.classList.add('active');
 }
 
 function processSendEmail() {
@@ -768,7 +789,7 @@ function processSendEmail() {
   localStorage.setItem('lastUsedEmail', emailInput);
 
   const btn = $('btnConfirmEmail');
-  btn.innerText = "⏳ Đang gửi...";
+  btn.innerText = "Đang gửi...";
   btn.disabled = true;
 
   // Lấy dữ liệu bảng
@@ -800,7 +821,7 @@ console.log("Dữ liệu tổng gửi đi:", summary);
       btn.disabled = false;
       if (res.ok) {
         showToast("✅ Đã gửi Email thành công!", "#16a34a");
-        closeCommonModal();
+        closeEmailModal();
       } else {
         alert("❌ Lỗi: " + res.error);
       }
@@ -808,15 +829,23 @@ console.log("Dữ liệu tổng gửi đi:", summary);
     .withFailureHandler(err => {
       btn.innerText = "Gửi";
       btn.disabled = false;
-      alert("❌ Lỗi kết nối: " + err.message);
+      console.error("Email Error:", err); // Log lỗi ra console để kiểm tra
+      if (err.message.includes("Required permissions") || err.message.includes("permission")) {
+          alert("⚠️ LỖI QUYỀN TRUY CẬP (PERMISSIONS)\n\nGoogle yêu cầu cấp quyền bổ sung để gửi mail.\n\nCÁCH KHẮC PHỤC:\n1. Mở trình chỉnh sửa Apps Script.\n2. Chạy thử hàm gửi mail trong đó -> Sẽ hiện bảng 'Authorization Required'.\n3. Nhấn 'Review Permissions' -> Chọn mail -> Advanced -> Go to ... (unsafe) -> Allow.\n4. Sau đó Deploy lại (New deployment) để cập nhật cho Web App.");
+      } else {
+          alert("❌ Lỗi kết nối: " + err.message);
+      }
     })
     // 🔑 GỬI THÊM BIẾN SUMMARY SANG SERVER
     .sendEmailFromApp(tableData, emailInput, summary); 
 }
 
-function closeCommonModal() {
-  const modal = $('commonModal');
-  if(modal) modal.style.display = 'none';
+function closeEmailModal() {
+  $('emailModal').classList.remove('active');
+}
+
+function closeEmailModalOutside(e) {
+  if(e.target.id === 'emailModal') closeEmailModal();
 }
 
 </script>
